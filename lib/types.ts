@@ -10,8 +10,11 @@ export type Company = {
   hq: string | null;
   website_url: string | null;
   linkedin_company_url: string | null;
+  careers_url: string | null;
+  crunchbase_url?: string | null;
   recommended_functions: string | null;
   rationale: string | null;
+  updated_at?: string | null;
 };
 export type Candidate = {
   id: string;
