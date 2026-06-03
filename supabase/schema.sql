@@ -60,6 +60,23 @@ create table if not exists public.candidate_pools (
   primary key(candidate_id, pool_id)
 );
 
+create table if not exists public.company_notes (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid references public.companies(id) on delete cascade,
+  note text not null,
+  owner_email text,
+  created_at timestamptz default now()
+);
+
+create table if not exists public.activity_feed (
+  id uuid primary key default gen_random_uuid(),
+  actor_email text,
+  action text not null,
+  entity_type text,
+  entity_name text,
+  created_at timestamptz default now()
+);
+
 create table if not exists public.outreach_activity (
   id uuid primary key default gen_random_uuid(),
   candidate_id uuid references public.candidates(id) on delete cascade,
@@ -98,6 +115,8 @@ alter table public.candidates enable row level security;
 alter table public.talent_pools enable row level security;
 alter table public.candidate_pools enable row level security;
 alter table public.outreach_activity enable row level security;
+alter table public.company_notes enable row level security;
+alter table public.activity_feed enable row level security;
 
 create policy "Lean users can read profiles" on public.profiles for select using (auth.jwt() ->> 'email' like '%@leantech.me');
 create policy "Users can update own profile" on public.profiles for update using (auth.uid() = id);
@@ -114,6 +133,8 @@ create policy "Lean users can read pools" on public.talent_pools for select usin
 create policy "Lean users can manage pools" on public.talent_pools for all using (auth.jwt() ->> 'email' like '%@leantech.me');
 create policy "Lean users can manage candidate pools" on public.candidate_pools for all using (auth.jwt() ->> 'email' like '%@leantech.me');
 create policy "Lean users can manage outreach" on public.outreach_activity for all using (auth.jwt() ->> 'email' like '%@leantech.me');
+create policy "Lean users can manage company notes" on public.company_notes for all using (auth.jwt() ->> 'email' like '%@leantech.me');
+create policy "Lean users can manage activity feed" on public.activity_feed for all using (auth.jwt() ->> 'email' like '%@leantech.me');
 
 insert into public.talent_pools (name, description) values
 ('Open Banking Product Leaders', 'Product talent from Plaid, Tink, Yapily, TrueLayer, Volt and similar companies'),

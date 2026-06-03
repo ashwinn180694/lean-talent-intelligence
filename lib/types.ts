@@ -14,8 +14,10 @@ export type Company = {
   crunchbase_url?: string | null;
   recommended_functions: string | null;
   rationale: string | null;
+  source?: string | null;
   updated_at?: string | null;
 };
+
 export type Candidate = {
   id: string;
   full_name: string;
@@ -23,9 +25,31 @@ export type Candidate = {
   company_id: string | null;
   company_name?: string | null;
   location: string | null;
+  country?: string | null;
   function_area: string | null;
   seniority: string | null;
   linkedin_url: string | null;
   status: string | null;
+  owner_id?: string | null;
   owner_email: string | null;
+  notes?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+export type CompanyNote = {
+  id: string;
+  company_id: string;
+  note: string;
+  owner_email: string | null;
+  created_at: string;
+};
+
+export type ActivityFeedItem = {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  entity_type: string | null;
+  entity_name: string | null;
+  created_at: string;
 };
