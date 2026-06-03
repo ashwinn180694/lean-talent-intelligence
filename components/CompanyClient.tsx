@@ -7,10 +7,19 @@ import type { Company } from '@/lib/types';
 export default function CompanyClient({ companies }: { companies: Company[] }) {
   const [q, setQ] = useState('');
   const [tier, setTier] = useState('All');
+  const [region, setRegion] = useState('All');
+
+  const regions = useMemo(() => {
+    const unique = Array.from(new Set(companies.map(c => c.region).filter(Boolean) as string[]));
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [companies]);
+
   const rows = useMemo(() => companies.filter(c => {
-    const hay = `${c.name} ${c.sector} ${c.sub_sector} ${c.country}`.toLowerCase();
-    return hay.includes(q.toLowerCase()) && (tier === 'All' || c.priority_tier === tier);
-  }), [companies, q, tier]);
+    const hay = `${c.name} ${c.sector} ${c.sub_sector} ${c.region} ${c.country}`.toLowerCase();
+    return hay.includes(q.toLowerCase())
+      && (tier === 'All' || c.priority_tier === tier)
+      && (region === 'All' || c.region === region);
+  }), [companies, q, tier, region]);
 
   return <>
     <div className="toolbar">
@@ -18,6 +27,14 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       <select className="select" style={{ maxWidth: 180 }} value={tier} onChange={e => setTier(e.target.value)}>
         <option>All</option><option>Tier 1</option><option>Tier 2</option><option>Tier 3</option>
       </select>
+      <select className="select" style={{ maxWidth: 220 }} value={region} onChange={e => setRegion(e.target.value)}>
+        <option value="All">All regions</option>
+        {regions.map(r => <option key={r} value={r}>{r}</option>)}
+      </select>
+      {(q || tier !== 'All' || region !== 'All') && <button className="btn secondary" onClick={() => { setQ(''); setTier('All'); setRegion('All'); }}>Clear filters</button>}
+    </div>
+    <div className="muted" style={{ margin: '-6px 0 14px' }}>
+      Showing {rows.length} of {companies.length} companies
     </div>
     <div className="grid grid-3">
       {rows.map(c => <div key={c.id} className="card company-card clickable-card">

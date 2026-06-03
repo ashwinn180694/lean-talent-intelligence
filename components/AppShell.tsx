@@ -10,7 +10,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
       <aside className="sidebar">
         <div className="brand">Lean Talent Intelligence</div>
         <nav className="nav">
-          <Link href="/dashboard">Dashboard</Link>
+          <Link href="/dashboard">Home</Link>
           <Link href="/companies">Companies</Link>
           <Link href="/candidates">Candidates</Link>
           <Link href="/talent-pools">Talent Pools</Link>

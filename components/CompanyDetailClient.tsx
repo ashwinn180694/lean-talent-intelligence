@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { ExternalLink, Pencil, Save, X } from 'lucide-react';
+import Link from 'next/link';
+import { ExternalLink, Pencil, Save, X, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 
@@ -49,6 +50,10 @@ export default function CompanyDetailClient({ company }: { company: Company }) {
   }
 
   return <div className="grid" style={{ gap: 18 }}>
+    <div className="breadcrumb">
+      <Link href="/dashboard">Home</Link><span>/</span><Link href="/companies">Companies</Link><span>/</span><strong>{current.name}</strong>
+    </div>
+    <Link href="/companies" className="back-link"><ArrowLeft size={16}/> Back to Companies</Link>
     <div className="card company-hero">
       <div>
         <div className="muted">Company profile</div>
