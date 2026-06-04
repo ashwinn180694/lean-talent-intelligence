@@ -18,6 +18,7 @@ export default function TalentPoolClient({ initial }: { initial: Pool[] }) {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -119,10 +120,10 @@ export default function TalentPoolClient({ initial }: { initial: Pool[] }) {
 
       <div className="grid grid-3">
         {filtered.map((pool) => (
-          <div className="card" key={pool.id}>
+          <div className="card clickable-card" key={pool.id} onClick={() => setSelectedPool(pool)}>
             <div className="card-title">{pool.name}</div>
             <p className="muted">{pool.description || 'No description yet.'}</p>
-            <div className="actions">
+            <div className="actions" onClick={(e) => e.stopPropagation()}>
               <button className="btn secondary" type="button" onClick={() => startEdit(pool)}>Edit</button>
               <button className="btn secondary" type="button" onClick={() => deletePool(pool)}>Delete</button>
             </div>
@@ -131,6 +132,26 @@ export default function TalentPoolClient({ initial }: { initial: Pool[] }) {
       </div>
 
       {filtered.length === 0 && <div className="card"><p className="muted">No talent pools found.</p></div>}
+
+      {selectedPool && <div className="modal-backdrop" role="dialog" aria-modal="true">
+        <div className="modal-card drilldown-modal">
+          <div className="modal-header">
+            <div>
+              <h2>{selectedPool.name}</h2>
+              <p className="muted">Talent pool quick view</p>
+            </div>
+            <button className="icon-btn" onClick={() => setSelectedPool(null)} aria-label="Close">×</button>
+          </div>
+          <p>{selectedPool.description || 'No description yet.'}</p>
+          <div className="empty-state">
+            <p>Candidate membership is the next step for Talent Pools. For now, use this quick view to review the pool and edit its sourcing criteria.</p>
+            <div className="actions">
+              <button className="btn" onClick={() => { startEdit(selectedPool); setSelectedPool(null); }}>Edit pool</button>
+              <button className="btn secondary" onClick={() => setSelectedPool(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      </div>}
     </>
   );
 }

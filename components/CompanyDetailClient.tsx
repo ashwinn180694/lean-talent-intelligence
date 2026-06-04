@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Pencil, Save, X, ArrowLeft, Plus, UserPlus } from 'lucide-react';
+import { ExternalLink, Pencil, Save, X, ArrowLeft, Plus, UserPlus, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Candidate, Company, CompanyNote } from '@/lib/types';
 
@@ -56,6 +56,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
   const [candidateForm, setCandidateForm] = useState(emptyCandidate(initialId, userEmail));
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [drilldown, setDrilldown] = useState<{ title: string; subtitle?: string; rows: Candidate[] } | null>(null);
 
   useEffect(() => {
     const id = company?.id || companyId;
@@ -212,6 +213,24 @@ export default function CompanyDetailClient({ company = null, companyId, candida
     logActivity('added company note', 'company', current.name);
   }
 
+  function openCandidateDrilldown(title: string, rows: Candidate[], subtitle?: string) {
+    setDrilldown({ title, rows, subtitle });
+  }
+
+  function candidateMiniCard(c: Candidate) {
+    return <div key={c.id} className="mini-record-card">
+      <div>
+        <Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link>
+        <div className="muted">{c.title || 'No title'} · {c.function_area || 'Unassigned'}</div>
+        <div className="muted">Owner: {c.owner_email || 'Unassigned'} · Status: {c.status || 'Mapped'}</div>
+      </div>
+      <div className="actions">
+        {c.linkedin_url && <a className="btn secondary" href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={13}/></a>}
+        <Link className="btn secondary" href={`/candidates/${c.id}`}>Open profile</Link>
+      </div>
+    </div>;
+  }
+
   if (loading && !current) {
     return <div className="grid" style={{ gap: 18 }}>
       <div className="breadcrumb"><Link href="/dashboard">Home</Link><span>/</span><Link href="/companies">Companies</Link><span>/</span><strong>Loading...</strong></div>
@@ -249,19 +268,19 @@ export default function CompanyDetailClient({ company = null, companyId, candida
     {error && <div className="error">{error}</div>}
 
     <div className="grid grid-4">
-      <div className="card"><div className="muted">Candidates</div><div className="stat">{companyCandidates.length}</div></div>
-      <div className="card"><div className="muted">Contacted</div><div className="stat">{companyCandidates.filter(c => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(c.status || '')).length}</div></div>
-      <div className="card"><div className="muted">Interested+</div><div className="stat">{companyCandidates.filter(c => ['Interested','Interviewing','Offer','Hired'].includes(c.status || '')).length}</div></div>
+      <button className="card metric-card" onClick={() => openCandidateDrilldown('All candidates', companyCandidates, current.name)}><div className="muted">Candidates</div><div className="stat">{companyCandidates.length}</div><span className="metric-hint">Click to view</span></button>
+      <button className="card metric-card" onClick={() => openCandidateDrilldown('Contacted candidates', companyCandidates.filter(c => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(c.status || '')), current.name)}><div className="muted">Contacted</div><div className="stat">{companyCandidates.filter(c => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(c.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
+      <button className="card metric-card" onClick={() => openCandidateDrilldown('Interested+ candidates', companyCandidates.filter(c => ['Interested','Interviewing','Offer','Hired'].includes(c.status || '')), current.name)}><div className="muted">Interested+</div><div className="stat">{companyCandidates.filter(c => ['Interested','Interviewing','Offer','Hired'].includes(c.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
       <div className="card"><div className="muted">Region</div><strong>{current.region || '-'}</strong><p className="muted">{current.country || current.hq || ''}</p></div>
     </div>
 
     <div className="card">
       <h2>Candidate coverage</h2>
       {functionBreakdown.length ? <div className="coverage-list">
-        {functionBreakdown.map(([fn, count]) => <div key={fn} className="coverage-row"><span>{fn}</span><strong>{count}</strong></div>)}
+        {functionBreakdown.map(([fn, count]) => <button key={fn} className="coverage-row coverage-button" onClick={() => openCandidateDrilldown(`${fn} candidates`, companyCandidates.filter(c => (c.function_area || 'Unassigned') === fn), current.name)}><span>{fn}</span><strong>{count}</strong></button>)}
       </div> : <p className="muted">No candidates mapped yet. Use Add Candidate to start building this company map.</p>}
       <div className="pipeline" style={{ marginTop: 16 }}>
-        {statusCounts.map(({ status, count }) => <div key={status} className="pipeline-step"><span>{status}</span><strong>{count}</strong></div>)}
+        {statusCounts.map(({ status, count }) => <button key={status} className="pipeline-step pipeline-button" onClick={() => openCandidateDrilldown(`${status} candidates`, companyCandidates.filter(c => c.status === status), current.name)}><span>{status}</span><strong>{count}</strong></button>)}
       </div>
     </div>
 
@@ -331,5 +350,20 @@ export default function CompanyDetailClient({ company = null, companyId, candida
         {companyNotes.length ? companyNotes.map(note => <div key={note.id} className="note-item"><p>{note.note}</p><div className="muted">{note.owner_email || 'Unknown'} · {new Date(note.created_at).toLocaleDateString()}</div></div>) : <p className="muted">No notes added yet.</p>}
       </div>
     </div>
+
+    {drilldown && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card drilldown-modal">
+        <div className="modal-header">
+          <div>
+            <h2>{drilldown.title}</h2>
+            <p className="muted">{drilldown.subtitle} · {drilldown.rows.length} record{drilldown.rows.length === 1 ? '' : 's'}</p>
+          </div>
+          <button className="icon-btn" onClick={() => setDrilldown(null)} aria-label="Close"><X size={20}/></button>
+        </div>
+        <div className="drilldown-list">
+          {drilldown.rows.length ? drilldown.rows.map(candidateMiniCard) : <div className="empty-state"><Users size={26}/><p>No candidates match this view yet.</p><button className="btn" onClick={() => { setDrilldown(null); setShowCandidateForm(true); }}>Add Candidate</button></div>}
+        </div>
+      </div>
+    </div>}
   </div>;
 }

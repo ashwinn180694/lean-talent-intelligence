@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import { Pencil, Trash2, ExternalLink, Save, X } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink, Save, X, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 
 const STATUSES = ['Mapped','Contacted','Replied','Interested','Interviewing','Offer','Hired','Rejected'];
@@ -58,6 +58,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   const [editForm, setEditForm] = useState<CandidateForm>(emptyForm(userEmail));
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [drilldown, setDrilldown] = useState<{ title: string; rows: any[] } | null>(null);
 
   const owners = useMemo(() => Array.from(new Set(rows.map(r => r.owner_email).filter(Boolean))).sort(), [rows]);
   const filtered = useMemo(() => rows.filter(r => {
@@ -183,12 +184,30 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     }});
   }
 
+  function openDrilldown(title: string, rows: any[]) {
+    setDrilldown({ title, rows });
+  }
+
+  function candidateMiniCard(c: any) {
+    return <div key={c.id} className="mini-record-card">
+      <div>
+        <Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link>
+        <div className="muted">{c.title || 'No title'} · {c.company_name || 'No company'}</div>
+        <div className="muted">{c.function_area || 'Unassigned'} · Owner: {c.owner_email || 'Unassigned'} · Status: {c.status || 'Mapped'}</div>
+      </div>
+      <div className="actions">
+        {c.linkedin_url && <a className="btn secondary" href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={13}/></a>}
+        <Link className="btn secondary" href={`/candidates/${c.id}`}>Open profile</Link>
+      </div>
+    </div>;
+  }
+
   return <>
     <div className="grid grid-4">
-      <div className="card"><div className="muted">Total candidates</div><div className="stat">{rows.length}</div></div>
-      <div className="card"><div className="muted">Contacted+</div><div className="stat">{rows.filter(r => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div></div>
-      <div className="card"><div className="muted">Interested+</div><div className="stat">{rows.filter(r => ['Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div></div>
-      <div className="card"><div className="muted">Owners</div><div className="stat">{owners.length}</div></div>
+      <button className="card metric-card" onClick={() => openDrilldown('All candidates', rows)}><div className="muted">Total candidates</div><div className="stat">{rows.length}</div><span className="metric-hint">Click to view</span></button>
+      <button className="card metric-card" onClick={() => openDrilldown('Contacted+ candidates', rows.filter(r => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(r.status || '')))}><div className="muted">Contacted+</div><div className="stat">{rows.filter(r => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
+      <button className="card metric-card" onClick={() => openDrilldown('Interested+ candidates', rows.filter(r => ['Interested','Interviewing','Offer','Hired'].includes(r.status || '')))}><div className="muted">Interested+</div><div className="stat">{rows.filter(r => ['Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
+      <button className="card metric-card" onClick={() => openDrilldown('Candidates grouped by owner', rows.filter(r => r.owner_email))}><div className="muted">Owners</div><div className="stat">{owners.length}</div><span className="metric-hint">Click to view</span></button>
     </div>
 
     <div className="card">
@@ -220,7 +239,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     {message && <div className="success">{message}</div>}
     {error && <div className="error">{error}</div>}
 
-    <div className="pipeline" style={{ marginBottom: 16 }}>{statusCounts.map(({ status, count }) => <div key={status} className="pipeline-step"><span>{status}</span><strong>{count}</strong></div>)}</div>
+    <div className="pipeline" style={{ marginBottom: 16 }}>{statusCounts.map(({ status, count }) => <button key={status} className="pipeline-step pipeline-button" onClick={() => openDrilldown(`${status} candidates`, rows.filter(r => r.status === status))}><span>{status}</span><strong>{count}</strong></button>)}</div>
 
     <div className="card"><table className="table"><thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Function</th><th>Owner</th><th>Status</th><th>Links</th><th>Actions</th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}><td><Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link></td><td>{c.title}</td><td>{c.company_id ? <Link className="table-link" href={`/companies/${c.company_id}`}>{c.company_name}</Link> : '-'}</td><td>{c.function_area}</td><td>{c.owner_email || '-'}</td><td><select className="mini-select" value={c.status || 'Mapped'} onChange={e => updateStatus(c.id, e.target.value, c.full_name)}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></td><td>{c.linkedin_url ? <a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={12}/></a> : '-'}</td><td><div className="actions"><button className="icon-btn small" onClick={() => startEdit(c)} title="Edit"><Pencil size={15}/></button><button className="icon-btn small danger" onClick={() => deleteCandidate(c)} title="Delete"><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>
 
@@ -240,6 +259,15 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
           <label className="full-span">Notes<textarea value={editForm.notes} onChange={e => setEditForm({ ...editForm, notes: e.target.value })} /></label>
           <div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save changes</button><button className="btn secondary" type="button" onClick={() => setEditingId(null)}>Cancel</button></div>
         </form>
+      </div>
+    </div>}
+    {drilldown && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card drilldown-modal">
+        <div className="modal-header">
+          <div><h2>{drilldown.title}</h2><p className="muted">{drilldown.rows.length} record{drilldown.rows.length === 1 ? '' : 's'}</p></div>
+          <button className="icon-btn" onClick={() => setDrilldown(null)} aria-label="Close"><X size={20}/></button>
+        </div>
+        <div className="drilldown-list">{drilldown.rows.length ? drilldown.rows.map(candidateMiniCard) : <div className="empty-state"><Users size={26}/><p>No candidates match this view yet.</p></div>}</div>
       </div>
     </div>}
   </>;
