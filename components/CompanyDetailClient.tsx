@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ExternalLink, Pencil, Save, X, ArrowLeft, Plus, UserPlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
@@ -30,20 +30,88 @@ function emptyCandidate(companyId: string, ownerEmail: string) {
   };
 }
 
-export default function CompanyDetailClient({ company, candidates, notes, userEmail }: { company: Company; candidates: Candidate[]; notes: CompanyNote[]; userEmail: string }) {
-  const [current, setCurrent] = useState(company);
+type Props = {
+  company?: Company | null;
+  companyId?: string;
+  candidates?: Candidate[];
+  notes?: CompanyNote[];
+  userEmail?: string;
+};
+
+export default function CompanyDetailClient({ company = null, companyId, candidates = [], notes = [], userEmail = '' }: Props) {
+  const initialId = company?.id || companyId || '';
+  const [current, setCurrent] = useState<Company | null>(company);
   const [companyCandidates, setCompanyCandidates] = useState<Candidate[]>(candidates || []);
   const [companyNotes, setCompanyNotes] = useState<CompanyNote[]>(notes || []);
+  const [resolvedUserEmail, setResolvedUserEmail] = useState(userEmail || '');
   const [editing, setEditing] = useState(false);
-  const [website, setWebsite] = useState(company.website_url || '');
-  const [linkedin, setLinkedin] = useState(company.linkedin_company_url || '');
+  const [website, setWebsite] = useState(company?.website_url || '');
+  const [linkedin, setLinkedin] = useState(company?.linkedin_company_url || '');
+  const [fitScore, setFitScore] = useState(company?.lean_fit_score ? String(company.lean_fit_score) : '');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(!company);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [showCandidateForm, setShowCandidateForm] = useState(false);
-  const [candidateForm, setCandidateForm] = useState(emptyCandidate(company.id, userEmail));
+  const [candidateForm, setCandidateForm] = useState(emptyCandidate(initialId, userEmail));
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+
+  useEffect(() => {
+    const id = company?.id || companyId;
+    if (!id) return;
+    let active = true;
+
+    async function loadCompany() {
+      setError('');
+      try {
+        const cached = sessionStorage.getItem(`lean_company_${id}`);
+        if (!company && cached) {
+          const parsed = JSON.parse(cached) as Company;
+          if (active) {
+            setCurrent(parsed);
+            setWebsite(parsed.website_url || '');
+            setLinkedin(parsed.linkedin_company_url || '');
+            setFitScore(parsed.lean_fit_score ? String(parsed.lean_fit_score) : '');
+            setLoading(false);
+          }
+        }
+      } catch {}
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (active && sessionData.session?.user?.email) {
+        setResolvedUserEmail(sessionData.session.user.email);
+        setCandidateForm(prev => ({ ...prev, owner_email: sessionData.session?.user?.email || prev.owner_email }));
+      }
+
+      const [{ data: freshCompany, error: companyError }, { data: freshCandidates }, { data: freshNotes }] = await Promise.all([
+        supabase.from('companies').select('*').eq('id', id).single(),
+        supabase.from('candidates_view').select('*').eq('company_id', id).order('created_at', { ascending: false }),
+        supabase.from('company_notes').select('*').eq('company_id', id).order('created_at', { ascending: false })
+      ]);
+
+      if (!active) return;
+      if (companyError) {
+        setError(companyError.message);
+        setLoading(false);
+        return;
+      }
+      if (freshCompany) {
+        const next = freshCompany as Company;
+        setCurrent(next);
+        setWebsite(next.website_url || '');
+        setLinkedin(next.linkedin_company_url || '');
+        setFitScore(next.lean_fit_score ? String(next.lean_fit_score) : '');
+        try { sessionStorage.setItem(`lean_company_${id}`, JSON.stringify(next)); } catch {}
+      }
+      setCompanyCandidates((freshCandidates || []) as Candidate[]);
+      setCompanyNotes((freshNotes || []) as CompanyNote[]);
+      setLoading(false);
+    }
+
+    loadCompany();
+    return () => { active = false; };
+  }, [company?.id, companyId]);
 
   const functionBreakdown = useMemo(() => {
     const counts = new Map<string, number>();
@@ -54,17 +122,24 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
   const statusCounts = useMemo(() => STATUSES.map(status => ({ status, count: companyCandidates.filter(c => c.status === status).length })), [companyCandidates]);
 
   async function logActivity(action: string, entityType: string, entityName: string) {
-    await supabase.from('activity_feed').insert({ actor_email: userEmail || null, action, entity_type: entityType, entity_name: entityName });
+    await supabase.from('activity_feed').insert({ actor_email: resolvedUserEmail || null, action, entity_type: entityType, entity_name: entityName });
   }
 
-  async function saveLinks(e: React.FormEvent) {
+  async function saveCompanyDetails(e: React.FormEvent) {
     e.preventDefault();
+    if (!current) return;
+    const score = fitScore.trim() ? Number(fitScore) : null;
+    if (score !== null && (Number.isNaN(score) || score < 1 || score > 10)) {
+      setError('Fit score must be between 1 and 10.');
+      return;
+    }
     setSaving(true);
     setError('');
     setMessage('');
     const updates = {
       website_url: normalizeUrl(website),
       linkedin_company_url: normalizeUrl(linkedin),
+      lean_fit_score: score,
       updated_at: new Date().toISOString()
     };
     const { data, error } = await supabase
@@ -78,16 +153,20 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
       setError(error.message);
       return;
     }
-    setCurrent(data as Company);
-    setWebsite((data as Company).website_url || '');
-    setLinkedin((data as Company).linkedin_company_url || '');
+    const next = data as Company;
+    setCurrent(next);
+    setWebsite(next.website_url || '');
+    setLinkedin(next.linkedin_company_url || '');
+    setFitScore(next.lean_fit_score ? String(next.lean_fit_score) : '');
+    try { sessionStorage.setItem(`lean_company_${next.id}`, JSON.stringify(next)); } catch {}
     setEditing(false);
-    setMessage('Company links updated.');
-    logActivity('updated company links', 'company', current.name);
+    setMessage('Company details updated.');
+    logActivity('updated company details', 'company', next.name);
   }
 
   async function addCandidate(e: React.FormEvent) {
     e.preventDefault();
+    if (!current) return;
     setError('');
     setMessage('');
     if (!candidateForm.full_name.trim()) {
@@ -96,12 +175,13 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
     }
     const payload = {
       ...candidateForm,
+      company_id: current.id,
       full_name: candidateForm.full_name.trim(),
       title: candidateForm.title.trim() || null,
       location: candidateForm.location.trim() || null,
       linkedin_url: normalizeUrl(candidateForm.linkedin_url),
       notes: candidateForm.notes.trim() || null,
-      owner_email: candidateForm.owner_email.trim() || userEmail || null
+      owner_email: candidateForm.owner_email.trim() || resolvedUserEmail || null
     };
     const { data, error } = await supabase.from('candidates').insert(payload).select('*').single();
     if (error) {
@@ -110,7 +190,7 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
     }
     const candidate = { ...(data as Candidate), company_name: current.name };
     setCompanyCandidates(prev => [candidate, ...prev]);
-    setCandidateForm(emptyCandidate(current.id, userEmail));
+    setCandidateForm(emptyCandidate(current.id, resolvedUserEmail));
     setShowCandidateForm(false);
     setMessage('Candidate added to this company.');
     logActivity('added candidate', 'candidate', candidate.full_name);
@@ -118,10 +198,10 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
 
   async function addNote(e: React.FormEvent) {
     e.preventDefault();
-    if (!newNote.trim()) return;
+    if (!current || !newNote.trim()) return;
     setAddingNote(true);
     setError('');
-    const { data, error } = await supabase.from('company_notes').insert({ company_id: current.id, note: newNote.trim(), owner_email: userEmail || null }).select('*').single();
+    const { data, error } = await supabase.from('company_notes').insert({ company_id: current.id, note: newNote.trim(), owner_email: resolvedUserEmail || null }).select('*').single();
     setAddingNote(false);
     if (error) {
       setError(error.message);
@@ -132,7 +212,19 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
     logActivity('added company note', 'company', current.name);
   }
 
-  return <div className="grid" style={{ gap: 18 }}>
+  if (loading && !current) {
+    return <div className="grid" style={{ gap: 18 }}>
+      <div className="breadcrumb"><Link href="/dashboard">Home</Link><span>/</span><Link href="/companies">Companies</Link><span>/</span><strong>Loading...</strong></div>
+      <div className="card skeleton-card"><div className="skeleton-line wide"></div><div className="skeleton-line"></div><div className="skeleton-line short"></div></div>
+      <div className="grid grid-4"><div className="card skeleton-card"></div><div className="card skeleton-card"></div><div className="card skeleton-card"></div><div className="card skeleton-card"></div></div>
+    </div>;
+  }
+
+  if (!current) {
+    return <div className="card"><h1>Company not found</h1><p className="muted">Return to Companies and try again.</p><Link href="/companies" className="btn secondary">Back to Companies</Link></div>;
+  }
+
+  return <div className="grid detail-page" style={{ gap: 18 }}>
     <div className="breadcrumb">
       <Link href="/dashboard">Home</Link><span>/</span><Link href="/companies">Companies</Link><span>/</span><strong>{current.name}</strong>
     </div>
@@ -149,7 +241,7 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
       </div>
       <div className="actions">
         <button className="btn secondary" onClick={() => setShowCandidateForm(true)}><UserPlus size={14}/> Add Candidate</button>
-        <button className="btn" onClick={() => setEditing(true)}><Pencil size={14}/> Edit links</button>
+        <button className="btn" onClick={() => setEditing(true)}><Pencil size={14}/> Edit company</button>
       </div>
     </div>
 
@@ -174,11 +266,16 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
     </div>
 
     <div className="card">
-      <h2>Links</h2>
-      {!editing ? <div className="actions">
-        <a className="btn secondary" href={current.website_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!current.website_url} onClick={e => { if (!current.website_url) e.preventDefault(); }}>Open Website <ExternalLink size={14}/></a>
-        <a className="btn secondary" href={current.linkedin_company_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!current.linkedin_company_url} onClick={e => { if (!current.linkedin_company_url) e.preventDefault(); }}>Open LinkedIn <ExternalLink size={14}/></a>
-      </div> : <form className="grid" onSubmit={saveLinks}>
+      <h2>Company details</h2>
+      {!editing ? <div className="company-detail-grid">
+        <div><div className="muted">Fit score</div><strong>{current.lean_fit_score || '-'}</strong></div>
+        <div><div className="muted">Website</div>{current.website_url ? <a href={current.website_url} target="_blank" rel="noreferrer">Open Website <ExternalLink size={14}/></a> : <span className="muted">Missing</span>}</div>
+        <div><div className="muted">LinkedIn</div>{current.linkedin_company_url ? <a href={current.linkedin_company_url} target="_blank" rel="noreferrer">Open LinkedIn <ExternalLink size={14}/></a> : <span className="muted">Missing</span>}</div>
+      </div> : <form className="grid form-grid" onSubmit={saveCompanyDetails}>
+        <label>
+          <div className="muted">Fit score</div>
+          <input className="input" type="number" min="1" max="10" value={fitScore} onChange={e => setFitScore(e.target.value)} placeholder="1-10" />
+        </label>
         <label>
           <div className="muted">Website URL</div>
           <input className="input" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://company.com" />
@@ -187,9 +284,9 @@ export default function CompanyDetailClient({ company, candidates, notes, userEm
           <div className="muted">LinkedIn company URL</div>
           <input className="input" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://www.linkedin.com/company/company-name" />
         </label>
-        <div className="actions">
+        <div className="actions full-span">
           <button className="btn" disabled={saving} type="submit"><Save size={14}/> {saving ? 'Saving...' : 'Save changes'}</button>
-          <button className="btn secondary" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); }}><X size={14}/> Cancel</button>
+          <button className="btn secondary" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }}><X size={14}/> Cancel</button>
         </div>
       </form>}
     </div>

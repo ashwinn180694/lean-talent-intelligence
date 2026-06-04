@@ -163,7 +163,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
     </div>
     <div className="grid grid-3">
       {rows.map(c => <div key={c.id} className="card company-card clickable-card">
-        <Link href={`/companies/${c.id}`} className="company-main-link" aria-label={`Open ${c.name} profile`}>
+        <Link href={`/companies/${c.id}`} prefetch className="company-main-link" aria-label={`Open ${c.name} profile`} onClick={() => { try { sessionStorage.setItem(`lean_company_${c.id}`, JSON.stringify(c)); } catch {} }}>
           <div className="card-title">{c.name}</div>
           <div>
             <span className={`pill ${(c.priority_tier || '').replace(' ', '').toLowerCase()}`}>{c.priority_tier || 'Unassigned'}</span>{' '}

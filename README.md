@@ -71,3 +71,8 @@ Do **not** add `SUPABASE_SERVICE_ROLE_KEY` to the browser-facing app unless you 
 - Add role-based permissions for Admin, Talent Partner, Sourcer, Hiring Manager
 - Add Ashby integration through server-side API routes or Supabase Edge Functions
 - Add audit/activity feed
+
+
+## v3 speed + fit score update
+- Company profile pages now render immediately using cached company data, then refresh from Supabase in the background.
+- Company detail page supports editing Lean Fit Score, Website URL, and LinkedIn URL.
