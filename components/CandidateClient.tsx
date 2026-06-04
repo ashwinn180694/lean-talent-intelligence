@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import { Pencil, Trash2, ExternalLink, Save, X, Users, Plus } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink, Save, X, Users, Plus, Upload, FileText } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 
 const STATUSES = ['Mapped','Contacted','Replied','Interested','Interviewing','Offer','Hired','Rejected'];
@@ -55,6 +55,8 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   const [companyFilter, setCompanyFilter] = useState('All');
   const [form, setForm] = useState<CandidateForm>(emptyForm(userEmail));
   const [showAdd, setShowAdd] = useState(false);
+  const [cvFile, setCvFile] = useState<File | null>(null);
+  const [savingCandidate, setSavingCandidate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<CandidateForm>(emptyForm(userEmail));
   const [message, setMessage] = useState('');
@@ -90,9 +92,34 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     return { ...data, company_name: company?.name || data.company_name || null };
   }
 
+  async function attachCv(candidateId: string, candidateName: string, file: File) {
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${candidateId}/${Date.now()}-${safeName}`;
+    const { error: uploadError } = await supabase.storage.from('candidate-cvs').upload(path, file, { upsert: false });
+    if (uploadError) throw uploadError;
+    const { data: signed } = await supabase.storage.from('candidate-cvs').createSignedUrl(path, 60 * 60 * 24 * 7);
+    const { error: docError } = await supabase.from('candidate_documents').insert({
+      candidate_id: candidateId,
+      file_name: file.name,
+      file_path: path,
+      file_url: signed?.signedUrl || null,
+      file_type: file.type || 'unknown',
+      uploaded_by: userEmail || null
+    });
+    if (docError) throw docError;
+    await supabase.from('candidate_timeline').insert({
+      candidate_id: candidateId,
+      actor_email: userEmail || null,
+      event_type: 'cv',
+      title: 'CV uploaded',
+      description: file.name
+    });
+    await logActivity('uploaded candidate CV', 'candidate', candidateName);
+  }
+
   async function addCandidate(e: React.FormEvent) {
     e.preventDefault();
-    setError(''); setMessage('');
+    setError(''); setMessage(''); setSavingCandidate(true);
     const payload = {
       ...form,
       full_name: form.full_name.trim(),
@@ -108,12 +135,27 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     };
     const { data, error } = await supabase.from('candidates').insert(payload).select('*').single();
     if (!error && data) {
-      setRows([enrichCandidate(data), ...rows]);
-      setForm(emptyForm(userEmail));
-      setShowAdd(false);
-      setMessage('Candidate added.');
-      logActivity('added candidate', 'candidate', data.full_name);
-    } else setError(error?.message || 'Could not add candidate.');
+      try {
+        if (cvFile) await attachCv(data.id, data.full_name, cvFile);
+        setRows([enrichCandidate(data), ...rows]);
+        setForm(emptyForm(userEmail));
+        setCvFile(null);
+        setShowAdd(false);
+        setMessage(cvFile ? 'Candidate added and CV uploaded.' : 'Candidate added.');
+        logActivity('added candidate', 'candidate', data.full_name);
+      } catch (cvError: any) {
+        setRows([enrichCandidate(data), ...rows]);
+        setForm(emptyForm(userEmail));
+        setCvFile(null);
+        setShowAdd(false);
+        setError(`Candidate added, but CV upload failed: ${cvError?.message || 'Unknown error'}`);
+      } finally {
+        setSavingCandidate(false);
+      }
+    } else {
+      setSavingCandidate(false);
+      setError(error?.message || 'Could not add candidate.');
+    }
   }
 
   function startEdit(candidate: any) {
@@ -214,36 +256,69 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   }
 
   return <>
-    <div className="grid grid-4">
-      <button className="card metric-card" onClick={() => openDrilldown('All candidates', rows)}><div className="muted">Total candidates</div><div className="stat">{rows.length}</div><span className="metric-hint">Click to view</span></button>
-      <button className="card metric-card" onClick={() => openDrilldown('Contacted+ candidates', rows.filter(r => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(r.status || '')))}><div className="muted">Contacted+</div><div className="stat">{rows.filter(r => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
-      <button className="card metric-card" onClick={() => openDrilldown('Interested+ candidates', rows.filter(r => ['Interested','Interviewing','Offer','Hired'].includes(r.status || '')))}><div className="muted">Interested+</div><div className="stat">{rows.filter(r => ['Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
-      <button className="card metric-card" onClick={() => openDrilldown('Candidates grouped by owner', rows.filter(r => r.owner_email))}><div className="muted">Owners</div><div className="stat">{owners.length}</div><span className="metric-hint">Click to view</span></button>
-    </div>
-
-    <div className="toolbar company-toolbar">
-      <div className="company-filter-group">
-        <input className="input" style={{ maxWidth: 320 }} placeholder="Search candidates..." value={q} onChange={e => setQ(e.target.value)} />
-      <select className="select" style={{ maxWidth: 210 }} value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}><option value="All">All companies</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
-      <select className="select" style={{ maxWidth: 180 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option>{STATUSES.map(s => <option key={s}>{s}</option>)}</select>
-      <select className="select" style={{ maxWidth: 220 }} value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}><option>All</option>{owners.map(o => <option key={o}>{o}</option>)}</select>
-      <label className="btn secondary">Import CSV<input hidden type="file" accept=".csv" onChange={e => e.target.files?.[0] && importCsv(e.target.files[0])}/></label>
-        <a className="btn secondary" href="/data/candidate_import_template.csv">Template</a>
+    <div className="candidate-page-shell">
+      <div className="candidate-page-header card">
+        <div>
+          <p className="eyebrow">Talent CRM</p>
+          <h2>Candidate database</h2>
+          <p className="muted">Search, filter, update ownership, and move candidates through the sourcing pipeline.</p>
+        </div>
+        <button className="btn add-candidate-top" onClick={() => { setForm(emptyForm(userEmail)); setCvFile(null); setShowAdd(true); }}><Plus size={16}/> Add Candidate</button>
       </div>
-      <button className="btn" onClick={() => setShowAdd(true)}><Plus size={16}/> Add Candidate</button>
+
+      <div className="candidate-metrics-row">
+        <button className="card metric-card" onClick={() => openDrilldown('All candidates', rows)}><div className="muted">Total candidates</div><div className="stat">{rows.length}</div><span className="metric-hint">Click to view</span></button>
+        <button className="card metric-card" onClick={() => openDrilldown('Contacted+ candidates', rows.filter(r => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(r.status || '')))}><div className="muted">Contacted+</div><div className="stat">{rows.filter(r => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
+        <button className="card metric-card" onClick={() => openDrilldown('Interested+ candidates', rows.filter(r => ['Interested','Interviewing','Offer','Hired'].includes(r.status || '')))}><div className="muted">Interested+</div><div className="stat">{rows.filter(r => ['Interested','Interviewing','Offer','Hired'].includes(r.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
+        <button className="card metric-card" onClick={() => openDrilldown('Candidates grouped by owner', rows.filter(r => r.owner_email))}><div className="muted">Owners</div><div className="stat">{owners.length}</div><span className="metric-hint">Click to view</span></button>
+      </div>
+
+      <div className="card candidate-filter-card">
+        <div className="candidate-filter-header">
+          <div><strong>Filter candidates</strong><p className="muted">Narrow by company, status, owner, or keyword.</p></div>
+          <div className="actions">
+            <label className="btn secondary">Import CSV<input hidden type="file" accept=".csv" onChange={e => e.target.files?.[0] && importCsv(e.target.files[0])}/></label>
+            <a className="btn secondary" href="/data/candidate_import_template.csv">Template</a>
+          </div>
+        </div>
+        <div className="candidate-filter-grid">
+          <input className="input" placeholder="Search by name, title, company, owner..." value={q} onChange={e => setQ(e.target.value)} />
+          <select className="select" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}><option value="All">All companies</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <select className="select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option>{STATUSES.map(s => <option key={s}>{s}</option>)}</select>
+          <select className="select" value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}><option>All</option>{owners.map(o => <option key={o}>{o}</option>)}</select>
+        </div>
+      </div>
+
+      {message && <div className="success">{message}</div>}
+      {error && <div className="error">{error}</div>}
+
+      <div className="pipeline candidate-pipeline" style={{ marginBottom: 16 }}>{statusCounts.map(({ status, count }) => <button key={status} className="pipeline-step pipeline-button" onClick={() => openDrilldown(`${status} candidates`, rows.filter(r => r.status === status))}><span>{status}</span><strong>{count}</strong></button>)}</div>
+
+      <div className="candidate-list-card card">
+        <div className="candidate-list-header"><strong>{filtered.length} candidate{filtered.length === 1 ? '' : 's'}</strong><span className="muted">Click a name to open the full candidate intelligence profile.</span></div>
+        <div className="candidate-card-list">
+          {filtered.length ? filtered.map(c => <div className="candidate-list-item" key={c.id}>
+            <div className="candidate-person-block">
+              <Link className="candidate-name-link" href={`/candidates/${c.id}`}>{c.full_name}</Link>
+              <div className="muted">{c.title || 'No title'} · {c.company_id ? <Link className="table-link" href={`/companies/${c.company_id}`}>{c.company_name}</Link> : 'No company'}</div>
+              <div className="candidate-meta-row"><span>{c.function_area || 'Unassigned'}</span><span>{c.seniority || 'No seniority'}</span><span>Owner: {c.owner_email || 'Unassigned'}</span></div>
+            </div>
+            <div className="candidate-status-block">
+              <select className="mini-select" value={c.status || 'Mapped'} onChange={e => updateStatus(c.id, e.target.value, c.full_name)}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select>
+              <div className="actions candidate-card-actions">
+                {c.linkedin_url ? <a className="btn secondary" href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={12}/></a> : null}
+                <button className="icon-btn small" onClick={() => startEdit(c)} title="Edit"><Pencil size={15}/></button>
+                <button className="icon-btn small danger" onClick={() => deleteCandidate(c)} title="Delete"><Trash2 size={15}/></button>
+              </div>
+            </div>
+          </div>) : <div className="empty-state"><Users size={26}/><p>No candidates match this view yet.</p></div>}
+        </div>
+      </div>
     </div>
-
-    {message && <div className="success">{message}</div>}
-    {error && <div className="error">{error}</div>}
-
-    <div className="pipeline" style={{ marginBottom: 16 }}>{statusCounts.map(({ status, count }) => <button key={status} className="pipeline-step pipeline-button" onClick={() => openDrilldown(`${status} candidates`, rows.filter(r => r.status === status))}><span>{status}</span><strong>{count}</strong></button>)}</div>
-
-    <div className="card"><table className="table"><thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Function</th><th>Owner</th><th>Status</th><th>Links</th><th>Actions</th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}><td><Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link></td><td>{c.title}</td><td>{c.company_id ? <Link className="table-link" href={`/companies/${c.company_id}`}>{c.company_name}</Link> : '-'}</td><td>{c.function_area}</td><td>{c.owner_email || '-'}</td><td><select className="mini-select" value={c.status || 'Mapped'} onChange={e => updateStatus(c.id, e.target.value, c.full_name)}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></td><td>{c.linkedin_url ? <a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={12}/></a> : '-'}</td><td><div className="actions"><button className="icon-btn small" onClick={() => startEdit(c)} title="Edit"><Pencil size={15}/></button><button className="icon-btn small danger" onClick={() => deleteCandidate(c)} title="Delete"><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>
-
 
     {showAdd && <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card">
-        <div className="modal-header"><div><h2>Add candidate</h2><p className="muted">Create a candidate without leaving this page.</p></div><button className="icon-btn" onClick={() => setShowAdd(false)} aria-label="Close"><X size={20}/></button></div>
+        <div className="modal-header"><div><h2>Add candidate</h2><p className="muted">Create a candidate without leaving this page.</p></div><button className="icon-btn" onClick={() => { setShowAdd(false); setCvFile(null); }} aria-label="Close"><X size={20}/></button></div>
         <form className="grid form-grid" onSubmit={addCandidate}>
           <label>Full name<input className="input" placeholder="Full name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
           <label>Title<input className="input" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
@@ -254,8 +329,16 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
           <label>Owner<input className="input" placeholder="Owner" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label>
           <label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
           <label className="full-span">LinkedIn URL<input className="input" placeholder="LinkedIn URL" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label>
+          <label className="full-span">CV / Resume upload
+            <div className="cv-upload-drop">
+              <FileText size={18}/>
+              <div><strong>{cvFile ? cvFile.name : 'Attach CV while creating candidate'}</strong><p className="muted">PDF, DOC, DOCX, or TXT. Parsing workspace is available inside the candidate profile.</p></div>
+              <span className="btn secondary"><Upload size={14}/> Choose file</span>
+              <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => setCvFile(e.target.files?.[0] || null)} />
+            </div>
+          </label>
           <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
-          <div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save candidate</button><button className="btn secondary" type="button" onClick={() => setShowAdd(false)}>Cancel</button></div>
+          <div className="modal-actions full-span"><button className="btn" type="submit" disabled={savingCandidate}><Save size={14}/> {savingCandidate ? 'Saving...' : 'Save candidate'}</button><button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); }}>Cancel</button></div>
         </form>
       </div>
     </div>}
