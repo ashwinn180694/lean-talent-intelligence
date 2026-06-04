@@ -329,23 +329,31 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
           <label>Owner<input className="input" placeholder="Owner" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label>
           <label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
           <label className="full-span">LinkedIn URL<input className="input" placeholder="LinkedIn URL" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label>
-          <label className="full-span">CV / Resume upload
-            <div className="cv-upload-drop">
-              <FileText size={18}/>
-              <div>
-                <strong>{cvFile ? cvFile.name : 'Attach CV while creating candidate'}</strong>
-                <p className="muted">{cvFile ? 'Ready to upload. Click Save candidate & upload CV below.' : 'PDF, DOC, DOCX, or TXT. Parsing workspace is available inside the candidate profile.'}</p>
+          <div className="full-span cv-upload-field">
+            <div className="field-label">CV / Resume</div>
+            <div className={cvFile ? 'cv-upload-panel cv-upload-panel-ready' : 'cv-upload-panel'}>
+              <div className="cv-upload-copy">
+                <div className="cv-upload-icon"><FileText size={20}/></div>
+                <div>
+                  <strong>{cvFile ? cvFile.name : 'Upload CV while creating candidate'}</strong>
+                  <p className="muted">{cvFile ? 'This CV will be uploaded to the candidate profile when you save.' : 'PDF, DOC, DOCX, or TXT. You can parse details later from the candidate profile.'}</p>
+                </div>
               </div>
-              <span className="btn secondary"><Upload size={14}/> {cvFile ? 'Change file' : 'Choose file'}</span>
-              <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => setCvFile(e.target.files?.[0] || null)} />
+              <div className="cv-upload-actions">
+                <label className="btn secondary cv-upload-button" htmlFor="candidate-cv-upload"><Upload size={14}/> {cvFile ? 'Change CV' : 'Upload CV'}</label>
+                <input id="candidate-cv-upload" className="sr-only-file" type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => setCvFile(e.target.files?.[0] || null)} />
+                {cvFile && <button className="btn secondary small" type="button" onClick={() => setCvFile(null)}>Remove</button>}
+              </div>
             </div>
             {cvFile && <div className="cv-selected-actions">
-              <span className="success-pill">CV attached and ready to upload</span>
-              <button className="btn secondary small" type="button" onClick={() => setCvFile(null)}>Remove CV</button>
+              <span className="success-pill">CV selected — click <strong>Save candidate & upload CV</strong> to finish.</span>
             </div>}
-          </label>
+          </div>
           <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
-          <div className="modal-actions full-span"><button className="btn" type="submit" disabled={savingCandidate}><Save size={14}/> {savingCandidate ? 'Saving...' : (cvFile ? 'Save candidate & upload CV' : 'Save candidate')}</button><button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); }}>Cancel</button></div>
+          <div className="modal-actions full-span candidate-save-actions">
+            <button className="btn" type="submit" disabled={savingCandidate}>{cvFile ? <Upload size={14}/> : <Save size={14}/>} {savingCandidate ? 'Saving...' : (cvFile ? 'Save candidate & upload CV' : 'Save candidate')}</button>
+            <button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); }}>Cancel</button>
+          </div>
         </form>
       </div>
     </div>}
