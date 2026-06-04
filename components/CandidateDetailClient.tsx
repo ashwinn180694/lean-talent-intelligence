@@ -67,6 +67,7 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [cvText, setCvText] = useState('');
+  const [selectedCvFile, setSelectedCvFile] = useState<File | null>(null);
   const [fileUploading, setFileUploading] = useState(false);
   const [experienceForm, setExperienceForm] = useState<any>({ company_name: '', title: '', start_date: '', end_date: '', is_current: false, notes: '' });
   const [applicationForm, setApplicationForm] = useState<any>({ role_title: '', status: 'Mapped', source: 'Talent Intelligence', applied_at: '', notes: '' });
@@ -196,6 +197,7 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
     const { data, error } = await supabase.from('candidate_documents').insert({ candidate_id: candidateId, file_name: file.name, file_path: path, file_url: signed?.signedUrl || null, file_type: file.type || 'unknown', uploaded_by: userEmail || null }).select('*').single();
     if (error) { setFileUploading(false); return setError(error.message); }
     setDocuments(prev => [data, ...prev]);
+    setSelectedCvFile(null);
     await addTimeline('CV uploaded', file.name, 'cv');
     setMessage('CV uploaded. For PDF/DOCX parsing, paste CV text into the parser box below. Server-side parsing can be added when we connect Ashby/API services.');
     if (file.type.startsWith('text/') || file.name.toLowerCase().endsWith('.txt')) {
@@ -353,11 +355,25 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
 
     {showCvModal && <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card">
-        <div className="modal-header"><div><h2>Upload CV & parse candidate details</h2><p className="muted">Upload CV files to Supabase. Paste CV text to extract skills and profile summary now; server-side PDF/DOCX parsing can be added with Ashby/API keys later.</p></div><button className="icon-btn" onClick={() => setShowCvModal(false)}><X size={20}/></button></div>
-        <label>CV file<input className="input" type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => e.target.files?.[0] && uploadCv(e.target.files[0])} /></label>
+        <div className="modal-header"><div><h2>Upload CV & parse candidate details</h2><p className="muted">Attach a CV to this candidate profile, then upload it explicitly. Paste CV text below to extract skills and profile summary now; server-side PDF/DOCX parsing can be added later with Ashby/API keys.</p></div><button className="icon-btn" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); }}><X size={20}/></button></div>
+        <div className="cv-upload-box">
+          <div>
+            <strong>Candidate CV</strong>
+            <p className="muted">PDF, DOC, DOCX, or TXT. The file is saved privately in Supabase Storage.</p>
+          </div>
+          <label className="btn secondary" style={{ cursor: 'pointer' }}>
+            <Upload size={14}/> Choose CV
+            <input type="file" accept=".pdf,.doc,.docx,.txt" style={{ display: 'none' }} onChange={e => setSelectedCvFile(e.target.files?.[0] || null)} />
+          </label>
+        </div>
+        {selectedCvFile && <div className="success"><strong>CV attached:</strong> {selectedCvFile.name}<button className="inline-link" type="button" onClick={() => setSelectedCvFile(null)}>Remove</button></div>}
         {fileUploading && <div className="success">Uploading CV...</div>}
         <label>Paste CV text for parsing<textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Paste CV text here to extract summary, skills, LinkedIn URL, and company mentions." /></label>
-        <div className="modal-actions"><button className="btn" onClick={applyCvParse} type="button"><Sparkles size={14}/> Parse pasted CV text</button><button className="btn secondary" onClick={() => setShowCvModal(false)} type="button">Close</button></div>
+        <div className="modal-actions">
+          <button className="btn" disabled={!selectedCvFile || fileUploading} onClick={() => selectedCvFile && uploadCv(selectedCvFile)} type="button"><Upload size={14}/> {fileUploading ? 'Uploading...' : 'Upload selected CV'}</button>
+          <button className="btn secondary" onClick={applyCvParse} type="button"><Sparkles size={14}/> Parse pasted CV text</button>
+          <button className="btn secondary" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); }} type="button">Close</button>
+        </div>
       </div>
     </div>}
 
