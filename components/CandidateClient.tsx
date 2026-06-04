@@ -332,13 +332,20 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
           <label className="full-span">CV / Resume upload
             <div className="cv-upload-drop">
               <FileText size={18}/>
-              <div><strong>{cvFile ? cvFile.name : 'Attach CV while creating candidate'}</strong><p className="muted">PDF, DOC, DOCX, or TXT. Parsing workspace is available inside the candidate profile.</p></div>
-              <span className="btn secondary"><Upload size={14}/> Choose file</span>
+              <div>
+                <strong>{cvFile ? cvFile.name : 'Attach CV while creating candidate'}</strong>
+                <p className="muted">{cvFile ? 'Ready to upload. Click Save candidate & upload CV below.' : 'PDF, DOC, DOCX, or TXT. Parsing workspace is available inside the candidate profile.'}</p>
+              </div>
+              <span className="btn secondary"><Upload size={14}/> {cvFile ? 'Change file' : 'Choose file'}</span>
               <input type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => setCvFile(e.target.files?.[0] || null)} />
             </div>
+            {cvFile && <div className="cv-selected-actions">
+              <span className="success-pill">CV attached and ready to upload</span>
+              <button className="btn secondary small" type="button" onClick={() => setCvFile(null)}>Remove CV</button>
+            </div>}
           </label>
           <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
-          <div className="modal-actions full-span"><button className="btn" type="submit" disabled={savingCandidate}><Save size={14}/> {savingCandidate ? 'Saving...' : 'Save candidate'}</button><button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); }}>Cancel</button></div>
+          <div className="modal-actions full-span"><button className="btn" type="submit" disabled={savingCandidate}><Save size={14}/> {savingCandidate ? 'Saving...' : (cvFile ? 'Save candidate & upload CV' : 'Save candidate')}</button><button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); }}>Cancel</button></div>
         </form>
       </div>
     </div>}
