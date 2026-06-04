@@ -139,29 +139,36 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
       <div className="pipeline">{STATUSES.map(s => <button key={s} className={`pipeline-step pipeline-button ${candidate.status === s ? 'active' : ''}`} onClick={() => updateStatus(s)}><span>{s}</span><strong>{candidate.status === s ? '✓' : ''}</strong></button>)}</div>
     </div>
 
-    {!editing ? <div className="card">
-      <h2>Details</h2>
+    <div className="card">
+      <div className="modal-header">
+        <div><h2>Details</h2><p className="muted">Candidate source profile, ownership, and notes.</p></div>
+        <button className="btn secondary" onClick={() => setEditing(true)}><Pencil size={14}/> Edit details</button>
+      </div>
       <div className="company-detail-grid">
         <div><div className="muted">LinkedIn</div>{candidate.linkedin_url ? <a href={candidate.linkedin_url} target="_blank" rel="noreferrer">Open LinkedIn <ExternalLink size={14}/></a> : <span className="muted">Missing</span>}</div>
         <div><div className="muted">Function</div><strong>{candidate.function_area || '-'}</strong></div>
         <div><div className="muted">Owner</div><strong>{candidate.owner_email || '-'}</strong></div>
       </div>
       <h3>Notes</h3><p className="muted">{candidate.notes || 'No notes added yet.'}</p>
-    </div> : <div className="card highlight-card">
-      <div className="modal-header"><div><h2>Edit candidate</h2><p className="muted">Update candidate details, owner, company mapping, and notes.</p></div><button className="icon-btn" onClick={() => setEditing(false)}><X size={20}/></button></div>
-      <form className="grid form-grid" onSubmit={save}>
-        <label>Full name<input className="input" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
-        <label>Title<input className="input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
-        <label>Company<select className="select" value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-        <label>Location<input className="input" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></label>
-        <label>Function<select className="select" value={form.function_area} onChange={e => setForm({ ...form, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
-        <label>Seniority<input className="input" value={form.seniority} onChange={e => setForm({ ...form, seniority: e.target.value })} /></label>
-        <label>Owner<input className="input" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label>
-        <label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
-        <label className="full-span">LinkedIn URL<input className="input" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label>
-        <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
-        <div className="actions full-span"><button className="btn" type="submit"><Save size={14}/> Save changes</button><button className="btn secondary" type="button" onClick={() => setEditing(false)}>Cancel</button></div>
-      </form>
+    </div>
+
+    {editing && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <div className="modal-header"><div><h2>Edit candidate</h2><p className="muted">Update candidate details, owner, company mapping, and notes.</p></div><button className="icon-btn" onClick={() => setEditing(false)}><X size={20}/></button></div>
+        <form className="grid form-grid" onSubmit={save}>
+          <label>Full name<input className="input" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
+          <label>Title<input className="input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
+          <label>Company<select className="select" value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+          <label>Location<input className="input" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></label>
+          <label>Function<select className="select" value={form.function_area} onChange={e => setForm({ ...form, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
+          <label>Seniority<input className="input" value={form.seniority} onChange={e => setForm({ ...form, seniority: e.target.value })} /></label>
+          <label>Owner<input className="input" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label>
+          <label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
+          <label className="full-span">LinkedIn URL<input className="input" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label>
+          <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
+          <div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save changes</button><button className="btn secondary" type="button" onClick={() => setEditing(false)}>Cancel</button></div>
+        </form>
+      </div>
     </div>}
   </div>;
 }

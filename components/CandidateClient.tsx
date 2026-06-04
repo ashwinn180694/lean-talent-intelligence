@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import { Pencil, Trash2, ExternalLink, Save, X, Users } from 'lucide-react';
+import { Pencil, Trash2, ExternalLink, Save, X, Users, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 
 const STATUSES = ['Mapped','Contacted','Replied','Interested','Interviewing','Offer','Hired','Rejected'];
@@ -54,6 +54,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   const [ownerFilter, setOwnerFilter] = useState('All');
   const [companyFilter, setCompanyFilter] = useState('All');
   const [form, setForm] = useState<CandidateForm>(emptyForm(userEmail));
+  const [showAdd, setShowAdd] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<CandidateForm>(emptyForm(userEmail));
   const [message, setMessage] = useState('');
@@ -100,6 +101,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     if (!error && data) {
       setRows([enrichCandidate(data), ...rows]);
       setForm(emptyForm(userEmail));
+      setShowAdd(false);
       setMessage('Candidate added.');
       logActivity('added candidate', 'candidate', data.full_name);
     } else setError(error?.message || 'Could not add candidate.');
@@ -210,30 +212,16 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       <button className="card metric-card" onClick={() => openDrilldown('Candidates grouped by owner', rows.filter(r => r.owner_email))}><div className="muted">Owners</div><div className="stat">{owners.length}</div><span className="metric-hint">Click to view</span></button>
     </div>
 
-    <div className="card">
-      <h2>Add candidate</h2>
-      <form className="grid form-grid" onSubmit={addCandidate}>
-        <label>Full name<input className="input" placeholder="Full name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
-        <label>Title<input className="input" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
-        <label>Company<select className="select" value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-        <label>Location<input className="input" placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></label>
-        <label>Function<select className="select" value={form.function_area} onChange={e => setForm({ ...form, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
-        <label>Seniority<input className="input" placeholder="Seniority" value={form.seniority} onChange={e => setForm({ ...form, seniority: e.target.value })} /></label>
-        <label>Owner<input className="input" placeholder="Owner" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label>
-        <label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
-        <label className="full-span">LinkedIn URL<input className="input" placeholder="LinkedIn URL" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label>
-        <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
-        <button className="btn">Save candidate</button>
-      </form>
-    </div>
-
-    <div className="toolbar">
-      <input className="input" style={{ maxWidth: 320 }} placeholder="Search candidates..." value={q} onChange={e => setQ(e.target.value)} />
+    <div className="toolbar company-toolbar">
+      <div className="company-filter-group">
+        <input className="input" style={{ maxWidth: 320 }} placeholder="Search candidates..." value={q} onChange={e => setQ(e.target.value)} />
       <select className="select" style={{ maxWidth: 210 }} value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}><option value="All">All companies</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
       <select className="select" style={{ maxWidth: 180 }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option>{STATUSES.map(s => <option key={s}>{s}</option>)}</select>
       <select className="select" style={{ maxWidth: 220 }} value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}><option>All</option>{owners.map(o => <option key={o}>{o}</option>)}</select>
       <label className="btn secondary">Import CSV<input hidden type="file" accept=".csv" onChange={e => e.target.files?.[0] && importCsv(e.target.files[0])}/></label>
-      <a className="btn secondary" href="/data/candidate_import_template.csv">Template</a>
+        <a className="btn secondary" href="/data/candidate_import_template.csv">Template</a>
+      </div>
+      <button className="btn" onClick={() => setShowAdd(true)}><Plus size={16}/> Add Candidate</button>
     </div>
 
     {message && <div className="success">{message}</div>}
@@ -242,6 +230,26 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     <div className="pipeline" style={{ marginBottom: 16 }}>{statusCounts.map(({ status, count }) => <button key={status} className="pipeline-step pipeline-button" onClick={() => openDrilldown(`${status} candidates`, rows.filter(r => r.status === status))}><span>{status}</span><strong>{count}</strong></button>)}</div>
 
     <div className="card"><table className="table"><thead><tr><th>Name</th><th>Title</th><th>Company</th><th>Function</th><th>Owner</th><th>Status</th><th>Links</th><th>Actions</th></tr></thead><tbody>{filtered.map(c => <tr key={c.id}><td><Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link></td><td>{c.title}</td><td>{c.company_id ? <Link className="table-link" href={`/companies/${c.company_id}`}>{c.company_name}</Link> : '-'}</td><td>{c.function_area}</td><td>{c.owner_email || '-'}</td><td><select className="mini-select" value={c.status || 'Mapped'} onChange={e => updateStatus(c.id, e.target.value, c.full_name)}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></td><td>{c.linkedin_url ? <a href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={12}/></a> : '-'}</td><td><div className="actions"><button className="icon-btn small" onClick={() => startEdit(c)} title="Edit"><Pencil size={15}/></button><button className="icon-btn small danger" onClick={() => deleteCandidate(c)} title="Delete"><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>
+
+
+    {showAdd && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <div className="modal-header"><div><h2>Add candidate</h2><p className="muted">Create a candidate without leaving this page.</p></div><button className="icon-btn" onClick={() => setShowAdd(false)} aria-label="Close"><X size={20}/></button></div>
+        <form className="grid form-grid" onSubmit={addCandidate}>
+          <label>Full name<input className="input" placeholder="Full name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
+          <label>Title<input className="input" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
+          <label>Company<select className="select" value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+          <label>Location<input className="input" placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></label>
+          <label>Function<select className="select" value={form.function_area} onChange={e => setForm({ ...form, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
+          <label>Seniority<input className="input" placeholder="Seniority" value={form.seniority} onChange={e => setForm({ ...form, seniority: e.target.value })} /></label>
+          <label>Owner<input className="input" placeholder="Owner" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label>
+          <label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
+          <label className="full-span">LinkedIn URL<input className="input" placeholder="LinkedIn URL" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label>
+          <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
+          <div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save candidate</button><button className="btn secondary" type="button" onClick={() => setShowAdd(false)}>Cancel</button></div>
+        </form>
+      </div>
+    </div>}
 
     {editingId && <div className="modal-backdrop">
       <div className="modal-card">

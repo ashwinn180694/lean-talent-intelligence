@@ -55,6 +55,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
   const [showCandidateForm, setShowCandidateForm] = useState(false);
   const [candidateForm, setCandidateForm] = useState(emptyCandidate(initialId, userEmail));
   const [newNote, setNewNote] = useState('');
+  const [showNoteForm, setShowNoteForm] = useState(false);
   const [addingNote, setAddingNote] = useState(false);
   const [drilldown, setDrilldown] = useState<{ title: string; subtitle?: string; rows: Candidate[] } | null>(null);
 
@@ -210,6 +211,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
     }
     setCompanyNotes(prev => [data as CompanyNote, ...prev]);
     setNewNote('');
+    setShowNoteForm(false);
     logActivity('added company note', 'company', current.name);
   }
 
@@ -285,48 +287,36 @@ export default function CompanyDetailClient({ company = null, companyId, candida
     </div>
 
     <div className="card">
-      <h2>Company details</h2>
-      {!editing ? <div className="company-detail-grid">
+      <div className="modal-header">
+        <div><h2>Company details</h2><p className="muted">Review key source links and fit score.</p></div>
+        <button className="btn secondary" onClick={() => setEditing(true)}><Pencil size={14}/> Edit details</button>
+      </div>
+      <div className="company-detail-grid">
         <div><div className="muted">Fit score</div><strong>{current.lean_fit_score || '-'}</strong></div>
         <div><div className="muted">Website</div>{current.website_url ? <a href={current.website_url} target="_blank" rel="noreferrer">Open Website <ExternalLink size={14}/></a> : <span className="muted">Missing</span>}</div>
         <div><div className="muted">LinkedIn</div>{current.linkedin_company_url ? <a href={current.linkedin_company_url} target="_blank" rel="noreferrer">Open LinkedIn <ExternalLink size={14}/></a> : <span className="muted">Missing</span>}</div>
-      </div> : <form className="grid form-grid" onSubmit={saveCompanyDetails}>
-        <label>
-          <div className="muted">Fit score</div>
-          <input className="input" type="number" min="1" max="10" value={fitScore} onChange={e => setFitScore(e.target.value)} placeholder="1-10" />
-        </label>
-        <label>
-          <div className="muted">Website URL</div>
-          <input className="input" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://company.com" />
-        </label>
-        <label>
-          <div className="muted">LinkedIn company URL</div>
-          <input className="input" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://www.linkedin.com/company/company-name" />
-        </label>
-        <div className="actions full-span">
-          <button className="btn" disabled={saving} type="submit"><Save size={14}/> {saving ? 'Saving...' : 'Save changes'}</button>
-          <button className="btn secondary" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }}><X size={14}/> Cancel</button>
-        </div>
-      </form>}
+      </div>
     </div>
 
-    {showCandidateForm && <div className="card highlight-card">
-      <div className="modal-header">
-        <div><h2>Add candidate from {current.name}</h2><p className="muted">This candidate will automatically be linked to {current.name}.</p></div>
-        <button className="icon-btn" type="button" onClick={() => setShowCandidateForm(false)} aria-label="Close"><X size={20}/></button>
+    {showCandidateForm && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <div className="modal-header">
+          <div><h2>Add candidate from {current.name}</h2><p className="muted">This candidate will automatically be linked to {current.name}.</p></div>
+          <button className="icon-btn" type="button" onClick={() => setShowCandidateForm(false)} aria-label="Close"><X size={20}/></button>
+        </div>
+        <form className="grid form-grid" onSubmit={addCandidate}>
+          <label>Full name<input className="input" value={candidateForm.full_name} onChange={e => setCandidateForm({ ...candidateForm, full_name: e.target.value })} required /></label>
+          <label>Title<input className="input" value={candidateForm.title} onChange={e => setCandidateForm({ ...candidateForm, title: e.target.value })} /></label>
+          <label>Location<input className="input" value={candidateForm.location} onChange={e => setCandidateForm({ ...candidateForm, location: e.target.value })} /></label>
+          <label>Function<select className="select" value={candidateForm.function_area} onChange={e => setCandidateForm({ ...candidateForm, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
+          <label>Seniority<input className="input" value={candidateForm.seniority} onChange={e => setCandidateForm({ ...candidateForm, seniority: e.target.value })} /></label>
+          <label>Status<select className="select" value={candidateForm.status} onChange={e => setCandidateForm({ ...candidateForm, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
+          <label>Owner<input className="input" value={candidateForm.owner_email} onChange={e => setCandidateForm({ ...candidateForm, owner_email: e.target.value })} /></label>
+          <label>LinkedIn URL<input className="input" value={candidateForm.linkedin_url} onChange={e => setCandidateForm({ ...candidateForm, linkedin_url: e.target.value })} /></label>
+          <label className="full-span">Notes<textarea value={candidateForm.notes} onChange={e => setCandidateForm({ ...candidateForm, notes: e.target.value })} /></label>
+          <div className="modal-actions full-span"><button className="btn" type="submit"><Plus size={14}/> Save Candidate</button><button className="btn secondary" type="button" onClick={() => setShowCandidateForm(false)}>Cancel</button></div>
+        </form>
       </div>
-      <form className="grid form-grid" onSubmit={addCandidate}>
-        <label>Full name<input className="input" value={candidateForm.full_name} onChange={e => setCandidateForm({ ...candidateForm, full_name: e.target.value })} required /></label>
-        <label>Title<input className="input" value={candidateForm.title} onChange={e => setCandidateForm({ ...candidateForm, title: e.target.value })} /></label>
-        <label>Location<input className="input" value={candidateForm.location} onChange={e => setCandidateForm({ ...candidateForm, location: e.target.value })} /></label>
-        <label>Function<select className="select" value={candidateForm.function_area} onChange={e => setCandidateForm({ ...candidateForm, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
-        <label>Seniority<input className="input" value={candidateForm.seniority} onChange={e => setCandidateForm({ ...candidateForm, seniority: e.target.value })} /></label>
-        <label>Status<select className="select" value={candidateForm.status} onChange={e => setCandidateForm({ ...candidateForm, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
-        <label>Owner<input className="input" value={candidateForm.owner_email} onChange={e => setCandidateForm({ ...candidateForm, owner_email: e.target.value })} /></label>
-        <label>LinkedIn URL<input className="input" value={candidateForm.linkedin_url} onChange={e => setCandidateForm({ ...candidateForm, linkedin_url: e.target.value })} /></label>
-        <label className="full-span">Notes<textarea value={candidateForm.notes} onChange={e => setCandidateForm({ ...candidateForm, notes: e.target.value })} /></label>
-        <div className="actions full-span"><button className="btn" type="submit"><Plus size={14}/> Save Candidate</button><button className="btn secondary" type="button" onClick={() => setShowCandidateForm(false)}>Cancel</button></div>
-      </form>
     </div>}
 
     <div className="grid grid-3">
@@ -341,15 +331,48 @@ export default function CompanyDetailClient({ company = null, companyId, candida
     </div>
 
     <div className="card">
-      <h2>Company notes</h2>
-      <form className="note-form" onSubmit={addNote}>
-        <textarea value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="Add sourcing notes, team insights, hiring observations, compensation notes, or anything useful for future Talent Partners..." />
-        <button className="btn" disabled={addingNote} type="submit">{addingNote ? 'Adding...' : 'Add note'}</button>
-      </form>
+      <div className="modal-header">
+        <div><h2>Company notes</h2><p className="muted">Sourcing insights, team context, and observations for future Talent Partners.</p></div>
+        <button className="btn" onClick={() => setShowNoteForm(true)}><Plus size={14}/> Add note</button>
+      </div>
       <div className="note-list">
         {companyNotes.length ? companyNotes.map(note => <div key={note.id} className="note-item"><p>{note.note}</p><div className="muted">{note.owner_email || 'Unknown'} · {new Date(note.created_at).toLocaleDateString()}</div></div>) : <p className="muted">No notes added yet.</p>}
       </div>
     </div>
+
+    {editing && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <div className="modal-header">
+          <div><h2>Edit company details</h2><p className="muted">Update fit score and source links without leaving the profile.</p></div>
+          <button className="icon-btn" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }} aria-label="Close"><X size={20}/></button>
+        </div>
+        <form className="grid form-grid" onSubmit={saveCompanyDetails}>
+          <label>Fit score<input className="input" type="number" min="1" max="10" value={fitScore} onChange={e => setFitScore(e.target.value)} placeholder="1-10" /></label>
+          <label>Website URL<input className="input" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://company.com" /></label>
+          <label>LinkedIn company URL<input className="input" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://www.linkedin.com/company/company-name" /></label>
+          <div className="modal-actions full-span">
+            <button className="btn" disabled={saving} type="submit"><Save size={14}/> {saving ? 'Saving...' : 'Save changes'}</button>
+            <button className="btn secondary" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }}><X size={14}/> Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>}
+
+    {showNoteForm && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card">
+        <div className="modal-header">
+          <div><h2>Add company note</h2><p className="muted">Capture sourcing context for {current.name}.</p></div>
+          <button className="icon-btn" type="button" onClick={() => { setShowNoteForm(false); setNewNote(''); }} aria-label="Close"><X size={20}/></button>
+        </div>
+        <form className="grid" onSubmit={addNote}>
+          <textarea value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="Add sourcing notes, team insights, hiring observations, compensation notes, or anything useful for future Talent Partners..." />
+          <div className="modal-actions">
+            <button className="btn" disabled={addingNote} type="submit">{addingNote ? 'Adding...' : 'Add note'}</button>
+            <button className="btn secondary" type="button" onClick={() => { setShowNoteForm(false); setNewNote(''); }}>Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>}
 
     {drilldown && <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card drilldown-modal">
