@@ -64,6 +64,15 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
     } catch {}
   }, []);
 
+  useEffect(() => {
+    setAllCompanies(companies);
+    try {
+      const serialized = JSON.stringify(companies);
+      sessionStorage.setItem('lean_cache_companies_v1', serialized);
+      localStorage.setItem('lean_cache_companies_v1', serialized);
+    } catch {}
+  }, [companies]);
+
   function persistSavedFilters(next: { name: string; q: string; tier: string; region: string }[]) {
     setSavedFilters(next);
     try { localStorage.setItem('lean_company_saved_filters', JSON.stringify(next)); } catch {}
@@ -133,7 +142,15 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       setError(error.message);
       return;
     }
-    if (data) setAllCompanies(prev => [data as Company, ...prev].sort((a, b) => a.name.localeCompare(b.name)));
+    if (data) setAllCompanies(prev => {
+      const next = [data as Company, ...prev].sort((a, b) => a.name.localeCompare(b.name));
+      try {
+        const serialized = JSON.stringify(next);
+        sessionStorage.setItem('lean_cache_companies_v1', serialized);
+        localStorage.setItem('lean_cache_companies_v1', serialized);
+      } catch {}
+      return next;
+    });
     setForm(emptyForm);
     setShowAdd(false);
     router.refresh();

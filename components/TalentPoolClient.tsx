@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 
@@ -21,6 +21,15 @@ export default function TalentPoolClient({ initial }: { initial: Pool[] }) {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null);
+
+  useEffect(() => {
+    setRows(initial || []);
+    try {
+      const serialized = JSON.stringify(initial || []);
+      sessionStorage.setItem('lean_cache_talent_pools_v1', serialized);
+      localStorage.setItem('lean_cache_talent_pools_v1', serialized);
+    } catch {}
+  }, [initial]);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();

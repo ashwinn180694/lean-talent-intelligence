@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
 import { Pencil, Trash2, ExternalLink, Save, X, Users, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
@@ -60,6 +60,15 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [drilldown, setDrilldown] = useState<{ title: string; rows: any[] } | null>(null);
+
+  useEffect(() => {
+    setRows(initial || []);
+    try {
+      const serialized = JSON.stringify(initial || []);
+      sessionStorage.setItem('lean_cache_candidates_v1', serialized);
+      localStorage.setItem('lean_cache_candidates_v1', serialized);
+    } catch {}
+  }, [initial]);
 
   const owners = useMemo(() => Array.from(new Set(rows.map(r => r.owner_email).filter(Boolean))).sort(), [rows]);
   const filtered = useMemo(() => rows.filter(r => {
