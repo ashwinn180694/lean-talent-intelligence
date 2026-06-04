@@ -33,6 +33,14 @@ export type Candidate = {
   owner_id?: string | null;
   owner_email: string | null;
   notes?: string | null;
+  cv_summary?: string | null;
+  parsed_cv_text?: string | null;
+  relationship_score?: number | null;
+  previous_company?: string | null;
+  skills?: string[] | null;
+  languages?: string[] | null;
+  ashby_candidate_id?: string | null;
+  ashby_last_synced_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };

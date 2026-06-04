@@ -76,3 +76,15 @@ Do **not** add `SUPABASE_SERVICE_ROLE_KEY` to the browser-facing app unless you 
 ## v3 speed + fit score update
 - Company profile pages now render immediately using cached company data, then refresh from Supabase in the background.
 - Company detail page supports editing Lean Fit Score, Website URL, and LinkedIn URL.
+
+## v8 Candidate Intelligence Migration
+
+After deploying this version, run this SQL file in Supabase SQL Editor:
+
+```text
+supabase/upgrade_v8_candidate_intelligence.sql
+```
+
+This adds CV upload metadata, candidate documents, career history, previous applications, candidate timeline, skills, relationship score, and Ashby-ready IDs. CV files are uploaded to a private Supabase Storage bucket named `candidate-cvs`.
+
+Current parser note: PDF/DOCX files can be uploaded and stored. The in-app parser works on pasted CV text or `.txt` files. Full server-side PDF/DOCX parsing should be added later as a backend/Ashby integration service.
