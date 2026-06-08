@@ -109,22 +109,3 @@ Supabase migration to run once:
 ```sql
 supabase/upgrade_v81_candidate_intelligence_completion.sql
 ```
-
-
-## v8.2 AwesomeFinTech company remodel
-
-This release replaces the existing Companies dataset with an AwesomeFinTech-inspired fintech market map.
-
-Run this in Supabase SQL Editor after pushing the app update:
-
-```sql
--- see supabase/upgrade_v82_awesomefintech_company_remodel.sql
-```
-
-What it does:
-- Adds AwesomeFinTech metadata columns to `companies`
-- Clears existing company records and company notes
-- Preserves candidates, but old company links are set to null
-- Seeds a focused fintech-company universe from public AwesomeFinTech category/top pages
-
-The public AwesomeFinTech pages expose category/top-list samples. The full 130K+ dataset requires AwesomeFinTech access.

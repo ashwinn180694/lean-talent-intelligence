@@ -16,6 +16,8 @@ export type Company = {
   rationale: string | null;
   source?: string | null;
   source_url?: string | null;
+  data_sources?: string[] | null;
+  source_profile_url?: string | null;
   awesomefintech_categories?: string | null;
   awesomefintech_rank?: string | null;
   updated_at?: string | null;

@@ -168,8 +168,8 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
     <div className="market-map-hero card">
       <div>
         <div className="eyebrow"><Globe2 size={15}/> FinTech market map</div>
-        <h2>AwesomeFinTech-focused company universe</h2>
-        <p className="muted">Companies are organized by fintech category, geography and Lean fit. Public AwesomeFinTech category lists seed the database; add Website/LinkedIn as your team validates each target.</p>
+        <h2>Unified fintech company universe</h2>
+        <p className="muted">Companies are organized by fintech category, geography, source and Lean fit. The dataset merges your original FinTech Weekly universe with AwesomeFinTech public category signals and preserves existing candidate mappings.</p>
       </div>
       <div className="market-stats">
         <div><strong>{allCompanies.length}</strong><span>Companies</span></div>
@@ -199,7 +199,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
         {(q || tier !== 'All' || region !== 'All' || category !== 'All') && <button className="btn secondary" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}>Clear</button>}
         <button className="btn secondary" onClick={saveCurrentFilter}>Save view</button>
       </div>
-      <button className="btn" onClick={() => setShowAdd(true)}><Plus size={16}/> Add FinTech Company</button>
+      <button className="btn" onClick={() => setShowAdd(true)}><Plus size={16}/> Add Company</button>
     </div>
 
     <div className="saved-filter-strip">{[...quickFilters, ...savedFilters].map(f => <button key={f.name} className="filter-chip" onClick={() => applyFilter(f)}>{f.name}</button>)}</div>
@@ -222,7 +222,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
 
     {showAdd && <div className="modal-backdrop" role="dialog" aria-modal="true">
       <form className="modal-card" onSubmit={addCompany}>
-        <div className="modal-header"><div><h2>Add FinTech Company</h2><p className="muted">Add a company to the fintech market map. Website/LinkedIn can be edited later.</p></div><button className="icon-btn" type="button" onClick={() => { setShowAdd(false); setError(''); }} aria-label="Close"><X size={20}/></button></div>
+        <div className="modal-header"><div><h2>Add Company</h2><p className="muted">Add a company to the fintech market map. Website/LinkedIn can be edited later.</p></div><button className="icon-btn" type="button" onClick={() => { setShowAdd(false); setError(''); }} aria-label="Close"><X size={20}/></button></div>
         <div className="form-grid">
           <label>Company name<input className="input" value={form.name} onChange={e => updateField('name', e.target.value)} required /></label>
           <label>Category<input className="input" placeholder="Payments, Open Banking, RegTech..." value={form.sub_sector} onChange={e => updateField('sub_sector', e.target.value)} /></label>
