@@ -205,62 +205,103 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   const totalTier1 = allCompanies.filter(c => c.priority_tier === 'Tier 1').length;
 
   return <>
-    <div className="market-map-hero card">
-      <div>
-        <div className="eyebrow"><Globe2 size={15}/> FinTech market map</div>
-        <h2>Fintech company universe</h2>
-        <p className="muted">Companies are organized into Lean's focused fintech sourcing categories and geography views, with website/LinkedIn links, notes, fit score and candidate mapping.</p>
-      </div>
-      <div className="market-stats">
-        <div><strong>{allCompanies.length}</strong><span>Companies</span></div>
-        <div><strong>{categories.length}</strong><span>Categories</span></div>
-        <div><strong>{totalTier1}</strong><span>Tier 1</span></div>
-      </div>
-    </div>
-
-    <div className="category-strip card">
-      {categoryCounts.map(([name, count]) => <button key={name} className={`category-tile ${category === name ? 'active' : ''}`} onClick={() => setCategory(name)}>
-        <Layers3 size={16}/><strong>{name}</strong><span>{count} companies</span>
-      </button>)}
-    </div>
-
-    <div className="toolbar company-toolbar">
-      <div className="company-filter-group">
-        <input className="input" style={{ maxWidth: 320 }} placeholder="Search fintech companies..." value={q} onChange={e => setQ(e.target.value)} />
-        <select className="select" style={{ maxWidth: 210 }} value={category} onChange={e => setCategory(e.target.value)}>
-          <option value="All">All categories</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select className="select" style={{ maxWidth: 180 }} value={tier} onChange={e => setTier(e.target.value)}>
-          <option>All</option><option>Tier 1</option><option>Tier 2</option><option>Tier 3</option>
-        </select>
-        <select className="select" style={{ maxWidth: 180 }} value={region} onChange={e => setRegion(e.target.value)}>
-          <option value="All">All geography</option>{regions.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
-        {(q || tier !== 'All' || region !== 'All' || category !== 'All') && <button className="btn secondary" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}>Clear</button>}
-        <button className="btn secondary" onClick={saveCurrentFilter}>Save view</button>
-      </div>
-      <button className="btn" onClick={() => setShowAdd(true)}><Plus size={16}/> Add Company</button>
-    </div>
-
-    <div className="saved-filter-strip">{[...quickFilters, ...savedFilters].map(f => <button key={f.name} className="filter-chip" onClick={() => applyFilter(f)}>{f.name}</button>)}</div>
-    <div className="muted" style={{ margin: '-6px 0 14px' }}>Showing {rows.length} of {allCompanies.length} fintech companies</div>
-
-    <div className="grid grid-3">
-      {rows.map(c => <div key={c.id} className="card company-card clickable-card fintech-company-card">
-        <Link href={`/companies/${c.id}`} prefetch className="company-main-link" aria-label={`Open ${c.name} profile`} onClick={() => { try { sessionStorage.setItem(`lean_company_${c.id}`, JSON.stringify(c)); } catch {} }}>
-          <div className="card-title">{c.name}</div>
-          <div><span className={`pill ${(c.priority_tier || '').replace(' ', '').toLowerCase()}`}>{c.priority_tier || 'Unassigned'}</span>{' '}<span className="pill">Fit {c.lean_fit_score || '-'}</span></div>
-          <div className="muted">{c.sub_sector || c.sector || 'FinTech'} · {c.region || 'Global'}</div>
-          <div className="source-mini">{sourceLabel(c)}</div>
-        </Link>
-        <div className="actions" onClick={e => e.stopPropagation()}>
-          <a className="btn secondary" href={c.website_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!c.website_url} onClick={e => { if (!c.website_url) e.preventDefault(); }}>Website <ExternalLink size={14}/></a>
-          <a className="btn secondary" href={c.linkedin_company_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!c.linkedin_company_url} onClick={e => { if (!c.linkedin_company_url) e.preventDefault(); }}>LinkedIn <ExternalLink size={14}/></a>
-          <button className="btn secondary danger-btn" type="button" onClick={() => { setPendingDelete(c); setDeleteError(''); }}>Remove <Trash2 size={14}/></button>
+    <section className="company-page-shell">
+      <div className="company-page-header card">
+        <div className="company-header-copy">
+          <div className="eyebrow"><Globe2 size={15}/> FinTech company map</div>
+          <h2>Focused company universe</h2>
+          <p className="muted">A streamlined sourcing map built around Lean's priority markets and talent pools. Use the category cards, filters and search to move quickly without horizontal scrolling.</p>
         </div>
-      </div>)}
-    </div>
+        <div className="company-header-actions">
+          <button className="btn" onClick={() => setShowAdd(true)}><Plus size={16}/> Add Company</button>
+        </div>
+      </div>
 
+      <div className="company-metrics-row">
+        <button className={`company-metric-card card ${category === 'All' ? 'active' : ''}`} onClick={() => setCategory('All')}>
+          <span>Total companies</span><strong>{allCompanies.length}</strong><em>All focused categories</em>
+        </button>
+        <button className={`company-metric-card card ${tier === 'Tier 1' ? 'active' : ''}`} onClick={() => setTier(tier === 'Tier 1' ? 'All' : 'Tier 1')}>
+          <span>Tier 1</span><strong>{totalTier1}</strong><em>Highest-priority targets</em>
+        </button>
+        <button className="company-metric-card card" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}>
+          <span>Current view</span><strong>{rows.length}</strong><em>Visible after filters</em>
+        </button>
+      </div>
+
+      <div className="focused-category-panel card">
+        <div className="section-heading-row">
+          <div>
+            <h3>Priority categories</h3>
+            <p className="muted">Only these categories are available as filters.</p>
+          </div>
+          {(category !== 'All') && <button className="btn secondary" onClick={() => setCategory('All')}>Show all</button>}
+        </div>
+        <div className="focused-category-grid">
+          {ALLOWED_COMPANY_CATEGORIES.map(name => {
+            const count = categoryCounts.find(([cat]) => cat === name)?.[1] || 0;
+            return <button key={name} className={`focused-category-card ${category === name ? 'active' : ''}`} onClick={() => setCategory(name)}>
+              <span>{name}</span>
+              <strong>{count}</strong>
+              <em>companies</em>
+            </button>;
+          })}
+        </div>
+      </div>
+
+      <div className="company-filter-card card">
+        <div className="company-filter-header">
+          <div>
+            <h3>Find companies</h3>
+            <p className="muted">Search by company name, category, country, source notes or rationale.</p>
+          </div>
+          <button className="btn secondary" onClick={saveCurrentFilter}>Save view</button>
+        </div>
+        <div className="company-filter-grid">
+          <input className="input" placeholder="Search companies, markets, countries..." value={q} onChange={e => setQ(e.target.value)} />
+          <select className="select" value={category} onChange={e => setCategory(e.target.value)}>
+            <option value="All">All categories</option>{categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select className="select" value={region} onChange={e => setRegion(e.target.value)}>
+            <option value="All">All geography</option>{regions.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+          <select className="select" value={tier} onChange={e => setTier(e.target.value)}>
+            <option>All</option><option>Tier 1</option><option>Tier 2</option><option>Tier 3</option>
+          </select>
+          {(q || tier !== 'All' || region !== 'All' || category !== 'All') && <button className="btn secondary" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}>Clear filters</button>}
+        </div>
+        {(savedFilters.length > 0) && <div className="saved-filter-strip compact-saved-views">{savedFilters.map(f => <button key={f.name} className="filter-chip" onClick={() => applyFilter(f)}>{f.name}</button>)}</div>}
+      </div>
+
+      <div className="company-results-header">
+        <div>
+          <h3>Company results</h3>
+          <p className="muted">Showing {rows.length} of {allCompanies.length} companies</p>
+        </div>
+      </div>
+
+      <div className="company-results-grid">
+        {rows.map(c => <div key={c.id} className="card company-card clickable-card fintech-company-card redesigned-company-card">
+          <Link href={`/companies/${c.id}`} prefetch className="company-main-link" aria-label={`Open ${c.name} profile`} onClick={() => { try { sessionStorage.setItem(`lean_company_${c.id}`, JSON.stringify(c)); } catch {} }}>
+            <div className="company-card-topline">
+              <div className="card-title">{c.name}</div>
+              <span className={`pill ${(c.priority_tier || '').replace(' ', '').toLowerCase()}`}>{c.priority_tier || 'Unassigned'}</span>
+            </div>
+            <div className="company-card-meta">
+              <span>{c.sub_sector || c.sector || 'FinTech'}</span>
+              <span>{c.region || 'Global'}</span>
+              <span>Fit {c.lean_fit_score || '-'}</span>
+            </div>
+            <div className="source-mini">{sourceLabel(c)}</div>
+          </Link>
+          <div className="company-card-actions" onClick={e => e.stopPropagation()}>
+            <a className="btn secondary" href={c.website_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!c.website_url} onClick={e => { if (!c.website_url) e.preventDefault(); }}>Website <ExternalLink size={14}/></a>
+            <a className="btn secondary" href={c.linkedin_company_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!c.linkedin_company_url} onClick={e => { if (!c.linkedin_company_url) e.preventDefault(); }}>LinkedIn <ExternalLink size={14}/></a>
+            <button className="btn secondary danger-btn" type="button" onClick={() => { setPendingDelete(c); setDeleteError(''); }}>Remove <Trash2 size={14}/></button>
+          </div>
+        </div>)}
+      </div>
+    </section>
 
 
     {pendingDelete && <div className="modal-backdrop" role="dialog" aria-modal="true">
