@@ -74,3 +74,5 @@
 .category-tile span { color:var(--muted); font-size:12px; }
 .fintech-company-card .source-mini { margin-top:10px; color:var(--muted); font-size:12px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 @media (max-width: 780px) { .market-map-hero { flex-direction:column; align-items:flex-start; } .market-stats { width:100%; } .market-stats div { flex:1; } }
+
+.btn.danger{background:#b42318;color:#fff}.btn.danger:hover{background:#912018}.danger-btn{color:#b42318!important;border-color:#fecdca!important;background:#fff!important}.danger-btn:hover{background:#fef3f2!important}.delete-confirm-modal{width:min(560px,100%)}

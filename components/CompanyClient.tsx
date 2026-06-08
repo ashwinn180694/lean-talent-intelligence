@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ExternalLink, Plus, X, Globe2, Layers3 } from 'lucide-react';
+import { ExternalLink, Plus, X, Globe2, Layers3, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 
@@ -27,7 +27,7 @@ const emptyForm: CompanyForm = {
   name: '',
   priority_tier: 'Tier 2',
   sector: 'FinTech',
-  sub_sector: '',
+  sub_sector: 'Global Fintech',
   region: 'Global',
   country: '',
   hq: '',
@@ -39,6 +39,20 @@ const emptyForm: CompanyForm = {
   rationale: '',
   source_url: ''
 };
+
+
+const ALLOWED_COMPANY_CATEGORIES = [
+  'Payments',
+  'Remittance',
+  'Lending',
+  'Trading, Crypto & Investing',
+  'Payments Infrastructure',
+  'OpenBanking',
+  'KSA',
+  'UAE',
+  'Global Fintech',
+  'Big Tech'
+];
 
 function cleanUrl(value: string) {
   const trimmed = value.trim();
@@ -62,7 +76,10 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   const [savedFilters, setSavedFilters] = useState<{ name: string; q: string; tier: string; region: string; category: string }[]>([]);
   const [form, setForm] = useState<CompanyForm>(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Company | null>(null);
   const [error, setError] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     try {
@@ -92,11 +109,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   }
 
   const quickFilters = [
-    { name: 'Payments', q: '', tier: 'All', region: 'All', category: 'Payments' },
-    { name: 'Open Banking', q: '', tier: 'All', region: 'All', category: 'Open Banking' },
-    { name: 'Banking', q: '', tier: 'All', region: 'All', category: 'Banking' },
-    { name: 'RegTech', q: '', tier: 'All', region: 'All', category: 'RegTech' },
-    { name: 'Neobanks', q: '', tier: 'All', region: 'All', category: 'Neobanks' },
+    ...ALLOWED_COMPANY_CATEGORIES.map(name => ({ name, q: '', tier: 'All', region: 'All', category: name })),
     { name: 'Tier 1', q: '', tier: 'Tier 1', region: 'All', category: 'All' }
   ];
 
@@ -108,19 +121,25 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   }
 
   const regions = useMemo(() => Array.from(new Set(allCompanies.map(c => c.region).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b)), [allCompanies]);
-  const categories = useMemo(() => Array.from(new Set(allCompanies.map(c => c.sub_sector || c.sector).filter(Boolean) as string[])).sort((a, b) => a.localeCompare(b)), [allCompanies]);
+  const categories = ALLOWED_COMPANY_CATEGORIES;
   const categoryCounts = useMemo(() => {
     const map = new Map<string, number>();
-    allCompanies.forEach(c => map.set(c.sub_sector || c.sector || 'Unassigned', (map.get(c.sub_sector || c.sector || 'Unassigned') || 0) + 1));
-    return Array.from(map.entries()).sort((a,b) => b[1] - a[1]).slice(0, 8);
+    ALLOWED_COMPANY_CATEGORIES.forEach(cat => map.set(cat, 0));
+    allCompanies.forEach(c => {
+      const cat = c.sub_sector || 'Global Fintech';
+      if (ALLOWED_COMPANY_CATEGORIES.includes(cat)) map.set(cat, (map.get(cat) || 0) + 1);
+    });
+    return Array.from(map.entries()).filter(([, count]) => count > 0).sort((a,b) => b[1] - a[1]);
   }, [allCompanies]);
 
   const rows = useMemo(() => allCompanies.filter(c => {
+    const companyCategory = c.sub_sector || 'Global Fintech';
+    if (!ALLOWED_COMPANY_CATEGORIES.includes(companyCategory)) return false;
     const hay = `${c.name} ${c.sector} ${c.sub_sector} ${c.region} ${c.country} ${c.rationale} ${c.awesomefintech_categories}`.toLowerCase();
     return hay.includes(q.toLowerCase())
       && (tier === 'All' || c.priority_tier === tier)
       && (region === 'All' || c.region === region)
-      && (category === 'All' || c.sub_sector === category || (c.awesomefintech_categories || '').includes(category));
+      && (category === 'All' || companyCategory === category);
   }), [allCompanies, q, tier, region, category]);
 
   function updateField(field: keyof CompanyForm, value: string) { setForm(prev => ({ ...prev, [field]: value })); }
@@ -144,7 +163,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       careers_url: cleanUrl(form.careers_url),
       recommended_functions: form.recommended_functions.trim() || null,
       rationale: form.rationale.trim() || null,
-      source: 'Manual fintech company',
+      source: 'Manual company',
       source_url: cleanUrl(form.source_url)
     };
     const { data, error } = await supabase.from('companies').insert(payload).select('*').single();
@@ -162,14 +181,35 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
     setForm(emptyForm); setShowAdd(false); router.refresh();
   }
 
+
+  async function removeCompany() {
+    if (!pendingDelete) return;
+    setDeleteError('');
+    setDeleting(true);
+    const { error } = await supabase.from('companies').delete().eq('id', pendingDelete.id);
+    setDeleting(false);
+    if (error) { setDeleteError(error.message); return; }
+    setAllCompanies(prev => {
+      const next = prev.filter(c => c.id !== pendingDelete.id);
+      try {
+        const serialized = JSON.stringify(next);
+        sessionStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
+        localStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
+      } catch {}
+      return next;
+    });
+    setPendingDelete(null);
+    router.refresh();
+  }
+
   const totalTier1 = allCompanies.filter(c => c.priority_tier === 'Tier 1').length;
 
   return <>
     <div className="market-map-hero card">
       <div>
         <div className="eyebrow"><Globe2 size={15}/> FinTech market map</div>
-        <h2>Unified fintech company universe</h2>
-        <p className="muted">Companies are organized by fintech category, geography, source and Lean fit. The dataset merges your original FinTech Weekly universe with AwesomeFinTech public category signals and preserves existing candidate mappings.</p>
+        <h2>Fintech company universe</h2>
+        <p className="muted">Companies are organized into Lean's focused fintech sourcing categories and geography views, with website/LinkedIn links, notes, fit score and candidate mapping.</p>
       </div>
       <div className="market-stats">
         <div><strong>{allCompanies.length}</strong><span>Companies</span></div>
@@ -216,16 +256,36 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
         <div className="actions" onClick={e => e.stopPropagation()}>
           <a className="btn secondary" href={c.website_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!c.website_url} onClick={e => { if (!c.website_url) e.preventDefault(); }}>Website <ExternalLink size={14}/></a>
           <a className="btn secondary" href={c.linkedin_company_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!c.linkedin_company_url} onClick={e => { if (!c.linkedin_company_url) e.preventDefault(); }}>LinkedIn <ExternalLink size={14}/></a>
+          <button className="btn secondary danger-btn" type="button" onClick={() => { setPendingDelete(c); setDeleteError(''); }}>Remove <Trash2 size={14}/></button>
         </div>
       </div>)}
     </div>
+
+
+
+    {pendingDelete && <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-card delete-confirm-modal">
+        <div className="modal-header">
+          <div>
+            <h2>Remove company?</h2>
+            <p className="muted">This will remove <strong>{pendingDelete.name}</strong> from the company universe. Existing candidate records will stay in the database but may no longer be attached to this company.</p>
+          </div>
+          <button className="icon-btn" type="button" onClick={() => { setPendingDelete(null); setDeleteError(''); }} aria-label="Close"><X size={20}/></button>
+        </div>
+        {deleteError && <div className="error">{deleteError}</div>}
+        <div className="modal-actions">
+          <button className="btn secondary" type="button" onClick={() => { setPendingDelete(null); setDeleteError(''); }} disabled={deleting}>Cancel</button>
+          <button className="btn danger" type="button" onClick={removeCompany} disabled={deleting}>{deleting ? 'Removing...' : 'Remove company'}</button>
+        </div>
+      </div>
+    </div>}
 
     {showAdd && <div className="modal-backdrop" role="dialog" aria-modal="true">
       <form className="modal-card" onSubmit={addCompany}>
         <div className="modal-header"><div><h2>Add Company</h2><p className="muted">Add a company to the fintech market map. Website/LinkedIn can be edited later.</p></div><button className="icon-btn" type="button" onClick={() => { setShowAdd(false); setError(''); }} aria-label="Close"><X size={20}/></button></div>
         <div className="form-grid">
           <label>Company name<input className="input" value={form.name} onChange={e => updateField('name', e.target.value)} required /></label>
-          <label>Category<input className="input" placeholder="Payments, Open Banking, RegTech..." value={form.sub_sector} onChange={e => updateField('sub_sector', e.target.value)} /></label>
+          <label>Category<select className="select" value={form.sub_sector} onChange={e => updateField('sub_sector', e.target.value)}>{ALLOWED_COMPANY_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></label>
           <label>Priority tier<select className="select" value={form.priority_tier} onChange={e => updateField('priority_tier', e.target.value)}><option>Tier 1</option><option>Tier 2</option><option>Tier 3</option></select></label>
           <label>Lean fit score<input className="input" type="number" min="1" max="10" value={form.lean_fit_score} onChange={e => updateField('lean_fit_score', e.target.value)} /></label>
           <label>Geography<input className="input" placeholder="Global, MENA, Europe..." value={form.region} onChange={e => updateField('region', e.target.value)} /></label>
