@@ -15,6 +15,9 @@ export type Company = {
   recommended_functions: string | null;
   rationale: string | null;
   source?: string | null;
+  source_url?: string | null;
+  awesomefintech_categories?: string | null;
+  awesomefintech_rank?: string | null;
   updated_at?: string | null;
 };
 
@@ -38,7 +41,9 @@ export type Candidate = {
   relationship_score?: number | null;
   previous_company?: string | null;
   skills?: string[] | null;
+  tags?: string[] | null;
   languages?: string[] | null;
+  education?: any[] | null;
   ashby_candidate_id?: string | null;
   ashby_last_synced_at?: string | null;
   created_at?: string | null;

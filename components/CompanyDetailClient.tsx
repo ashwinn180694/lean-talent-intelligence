@@ -48,6 +48,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
   const [website, setWebsite] = useState(company?.website_url || '');
   const [linkedin, setLinkedin] = useState(company?.linkedin_company_url || '');
   const [fitScore, setFitScore] = useState(company?.lean_fit_score ? String(company.lean_fit_score) : '');
+  const [sourceUrl, setSourceUrl] = useState(company?.source_url || '');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!company);
   const [error, setError] = useState('');
@@ -75,6 +76,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
             setWebsite(parsed.website_url || '');
             setLinkedin(parsed.linkedin_company_url || '');
             setFitScore(parsed.lean_fit_score ? String(parsed.lean_fit_score) : '');
+            setSourceUrl(parsed.source_url || '');
             setLoading(false);
           }
         }
@@ -104,6 +106,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
         setWebsite(next.website_url || '');
         setLinkedin(next.linkedin_company_url || '');
         setFitScore(next.lean_fit_score ? String(next.lean_fit_score) : '');
+        setSourceUrl(next.source_url || '');
         try { sessionStorage.setItem(`lean_company_${id}`, JSON.stringify(next)); } catch {}
       }
       setCompanyCandidates((freshCandidates || []) as Candidate[]);
@@ -141,6 +144,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
     const updates = {
       website_url: normalizeUrl(website),
       linkedin_company_url: normalizeUrl(linkedin),
+      source_url: normalizeUrl(sourceUrl),
       lean_fit_score: score,
       updated_at: new Date().toISOString()
     };
@@ -160,6 +164,7 @@ export default function CompanyDetailClient({ company = null, companyId, candida
     setWebsite(next.website_url || '');
     setLinkedin(next.linkedin_company_url || '');
     setFitScore(next.lean_fit_score ? String(next.lean_fit_score) : '');
+    setSourceUrl(next.source_url || '');
     try { sessionStorage.setItem(`lean_company_${next.id}`, JSON.stringify(next)); } catch {}
     setEditing(false);
     setMessage('Company details updated.');
@@ -257,7 +262,8 @@ export default function CompanyDetailClient({ company = null, companyId, candida
         <div className="toolbar" style={{ marginBottom: 0 }}>
           <span className={`pill ${(current.priority_tier || '').replace(' ', '').toLowerCase()}`}>{current.priority_tier || 'Unassigned'}</span>
           <span className="pill">Fit {current.lean_fit_score || '-'}</span>
-          <span className="pill">{current.sub_sector || current.sector || 'Fintech'}</span>
+          <span className="pill">{current.sub_sector || current.sector || 'FinTech'}</span>
+          {current.source_url && <a className="pill link-pill" href={current.source_url} target="_blank" rel="noreferrer">AwesomeFinTech source <ExternalLink size={12}/></a>}
         </div>
       </div>
       <div className="actions">
@@ -344,15 +350,16 @@ export default function CompanyDetailClient({ company = null, companyId, candida
       <div className="modal-card">
         <div className="modal-header">
           <div><h2>Edit company details</h2><p className="muted">Update fit score and source links without leaving the profile.</p></div>
-          <button className="icon-btn" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }} aria-label="Close"><X size={20}/></button>
+          <button className="icon-btn" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); setSourceUrl(current.source_url || ''); }} aria-label="Close"><X size={20}/></button>
         </div>
         <form className="grid form-grid" onSubmit={saveCompanyDetails}>
           <label>Fit score<input className="input" type="number" min="1" max="10" value={fitScore} onChange={e => setFitScore(e.target.value)} placeholder="1-10" /></label>
           <label>Website URL<input className="input" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://company.com" /></label>
           <label>LinkedIn company URL<input className="input" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://www.linkedin.com/company/company-name" /></label>
+          <label>AwesomeFinTech/source URL<input className="input" value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://www.awesomefintech.com/category/payments/" /></label>
           <div className="modal-actions full-span">
             <button className="btn" disabled={saving} type="submit"><Save size={14}/> {saving ? 'Saving...' : 'Save changes'}</button>
-            <button className="btn secondary" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }}><X size={14}/> Cancel</button>
+            <button className="btn secondary" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); setSourceUrl(current.source_url || ''); }}><X size={14}/> Cancel</button>
           </div>
         </form>
       </div>

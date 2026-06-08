@@ -88,3 +88,43 @@ supabase/upgrade_v8_candidate_intelligence.sql
 This adds CV upload metadata, candidate documents, career history, previous applications, candidate timeline, skills, relationship score, and Ashby-ready IDs. CV files are uploaded to a private Supabase Storage bucket named `candidate-cvs`.
 
 Current parser note: PDF/DOCX files can be uploaded and stored. The in-app parser works on pasted CV text or `.txt` files. Full server-side PDF/DOCX parsing should be added later as a backend/Ashby integration service.
+
+## v8.1 Candidate Intelligence Completion
+
+This release completes the Candidate Intelligence layer before v9 Talent CRM.
+
+New capabilities:
+- Candidate profile completeness score
+- Candidate tags
+- Skills management
+- Languages management
+- Education section
+- Career history edit/delete
+- Application history edit/delete
+- Improved CV text parser workspace
+- Timeline events for profile, status, CV, skills, tags, education, experience, and applications
+
+Supabase migration to run once:
+
+```sql
+supabase/upgrade_v81_candidate_intelligence_completion.sql
+```
+
+
+## v8.2 AwesomeFinTech company remodel
+
+This release replaces the existing Companies dataset with an AwesomeFinTech-inspired fintech market map.
+
+Run this in Supabase SQL Editor after pushing the app update:
+
+```sql
+-- see supabase/upgrade_v82_awesomefintech_company_remodel.sql
+```
+
+What it does:
+- Adds AwesomeFinTech metadata columns to `companies`
+- Clears existing company records and company notes
+- Preserves candidates, but old company links are set to null
+- Seeds a focused fintech-company universe from public AwesomeFinTech category/top pages
+
+The public AwesomeFinTech pages expose category/top-list samples. The full 130K+ dataset requires AwesomeFinTech access.
