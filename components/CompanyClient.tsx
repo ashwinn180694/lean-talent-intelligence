@@ -65,6 +65,22 @@ function sourceLabel(c: Company) {
   return c.awesomefintech_rank || c.source || 'AwesomeFinTech public directory';
 }
 
+const COMPANY_CACHE_KEYS = [
+  'lean_cache_companies_current',
+  'lean_cache_companies_v1',
+  'lean_cache_companies_v2_awesomefintech'
+];
+
+function writeCompanyCaches(companies: Company[]) {
+  try {
+    const serialized = JSON.stringify(companies);
+    COMPANY_CACHE_KEYS.forEach(key => {
+      sessionStorage.setItem(key, serialized);
+      localStorage.setItem(key, serialized);
+    });
+  } catch {}
+}
+
 export default function CompanyClient({ companies }: { companies: Company[] }) {
   const router = useRouter();
   const [allCompanies, setAllCompanies] = useState<Company[]>(companies);
@@ -90,11 +106,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
 
   useEffect(() => {
     setAllCompanies(companies);
-    try {
-      const serialized = JSON.stringify(companies);
-      sessionStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
-      localStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
-    } catch {}
+    writeCompanyCaches(companies)
   }, [companies]);
 
   function persistSavedFilters(next: { name: string; q: string; tier: string; region: string; category: string }[]) {
@@ -171,11 +183,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
     if (error) { setError(error.message); return; }
     if (data) setAllCompanies(prev => {
       const next = [data as Company, ...prev].sort((a, b) => a.name.localeCompare(b.name));
-      try {
-        const serialized = JSON.stringify(next);
-        sessionStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
-        localStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
-      } catch {}
+      writeCompanyCaches(next)
       return next;
     });
     setForm(emptyForm); setShowAdd(false); router.refresh();
@@ -184,23 +192,44 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
 
   async function removeCompany() {
     if (!pendingDelete) return;
+    const companyToDelete = pendingDelete;
     setDeleteError('');
     setDeleting(true);
-    const { error } = await supabase.from('companies').delete().eq('id', pendingDelete.id);
+
+    // Detach linked candidates first. Candidate records remain, but the deleted company is gone permanently.
+    const { error: detachError } = await supabase
+      .from('candidates')
+      .update({ company_id: null })
+      .eq('company_id', companyToDelete.id);
+
+    if (detachError) {
+      setDeleting(false);
+      setDeleteError(`Could not detach linked candidates: ${detachError.message}`);
+      return;
+    }
+
+    const { data: deletedRows, error } = await supabase
+      .from('companies')
+      .delete()
+      .eq('id', companyToDelete.id)
+      .select('id');
+
     setDeleting(false);
     if (error) { setDeleteError(error.message); return; }
+    if (!deletedRows || deletedRows.length === 0) {
+      setDeleteError('No company was deleted. Run supabase/upgrade_v86_permanent_company_delete.sql, then try again.');
+      return;
+    }
+
     setAllCompanies(prev => {
-      const next = prev.filter(c => c.id !== pendingDelete.id);
-      try {
-        const serialized = JSON.stringify(next);
-        sessionStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
-        localStorage.setItem('lean_cache_companies_v2_awesomefintech', serialized);
-      } catch {}
+      const next = prev.filter(c => c.id !== companyToDelete.id);
+      writeCompanyCaches(next);
       return next;
     });
     setPendingDelete(null);
     router.refresh();
   }
+
 
   const totalTier1 = allCompanies.filter(c => c.priority_tier === 'Tier 1').length;
 
@@ -309,14 +338,14 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
         <div className="modal-header">
           <div>
             <h2>Remove company?</h2>
-            <p className="muted">This will remove <strong>{pendingDelete.name}</strong> from the company universe. Existing candidate records will stay in the database but may no longer be attached to this company.</p>
+            <p className="muted">This permanently deletes <strong>{pendingDelete.name}</strong> from Supabase. Existing candidate records stay, but they will be detached from this company.</p>
           </div>
           <button className="icon-btn" type="button" onClick={() => { setPendingDelete(null); setDeleteError(''); }} aria-label="Close"><X size={20}/></button>
         </div>
         {deleteError && <div className="error">{deleteError}</div>}
         <div className="modal-actions">
           <button className="btn secondary" type="button" onClick={() => { setPendingDelete(null); setDeleteError(''); }} disabled={deleting}>Cancel</button>
-          <button className="btn danger" type="button" onClick={removeCompany} disabled={deleting}>{deleting ? 'Removing...' : 'Remove company'}</button>
+          <button className="btn danger" type="button" onClick={removeCompany} disabled={deleting}>{deleting ? 'Deleting...' : 'Delete permanently'}</button>
         </div>
       </div>
     </div>}

@@ -6,7 +6,7 @@ import PageSkeleton from './PageSkeleton';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 
-const CACHE_KEY = 'lean_cache_companies_v1';
+const CACHE_KEY = 'lean_cache_companies_current';
 
 export default function CompaniesPageClient() {
   const [companies, setCompanies] = useState<Company[] | null>(null);
@@ -35,7 +35,7 @@ export default function CompaniesPageClient() {
   }, []);
 
   return <>
-    <div className="topbar"><div><h1 className="h1">Companies</h1><p className="muted">Lean 150 target universe with direct Website and LinkedIn links.</p></div>{refreshing && companies?.length ? <span className="sync-pill">Refreshing</span> : null}</div>
+    <div className="topbar"><div><h1 className="h1">Companies</h1><p className="muted">Focused fintech company universe with direct Website and LinkedIn links.</p></div>{refreshing && companies?.length ? <span className="sync-pill">Refreshing</span> : null}</div>
     {companies ? <CompanyClient companies={companies}/> : <PageSkeleton />}
   </>;
 }
