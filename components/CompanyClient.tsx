@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Plus, X, Globe2, Trash2, ChevronUp, ChevronDown, Sparkles, CheckCircle2, Loader2 } from 'lucide-react';
+import { ExternalLink, Plus, X, Trash2, ChevronUp, ChevronDown, Sparkles, CheckCircle2, Loader2, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 
@@ -68,6 +68,15 @@ function writeCompanyCaches(companies: Company[]) {
   } catch {}
 }
 
+function clearCompanyCaches() {
+  try {
+    COMPANY_CACHE_KEYS.forEach(key => {
+      sessionStorage.removeItem(key);
+      localStorage.removeItem(key);
+    });
+  } catch {}
+}
+
 function cleanUrl(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -108,7 +117,7 @@ function EditableSelect({ label, value, onChange, options }: { label: string; va
   </label>;
 }
 
-export default function CompanyClient({ companies }: { companies: Company[] }) {
+export default function CompanyClient({ companies, onCompaniesChange }: { companies: Company[]; onCompaniesChange?: (companies: Company[]) => void }) {
   const [allCompanies, setAllCompanies] = useState<Company[]>(companies);
   const [q, setQ] = useState('');
   const [tier, setTier] = useState('All');
@@ -125,6 +134,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   const [draft, setDraft] = useState<Company | null>(companies[0] || null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saveMessage, setSaveMessage] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -213,6 +223,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       writeCompanyCaches(updated);
       return updated;
     });
+    setHasUnsavedChanges(true);
     scheduleAutosave(next);
   }
 
@@ -224,6 +235,8 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   }
 
   async function saveCompany(company: Company) {
+    setSaveState('saving');
+    setSaveMessage('Saving to Supabase...');
     if (!company?.id) {
       setSaveState('error');
       setSaveMessage('Missing company ID. Refresh and try again.');
@@ -256,17 +269,20 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       .update(updates)
       .eq('id', company.id)
       .select('*')
-      .maybeSingle();
+      .single();
 
     if (error) {
       setSaveState('error');
       setSaveMessage(`Save failed: ${error.message}`);
+      setHasUnsavedChanges(true);
+      console.error('Company autosave failed', error);
       return;
     }
 
     if (!data) {
       setSaveState('error');
       setSaveMessage('Save failed: Supabase did not update this company. Please check company update permissions.');
+      setHasUnsavedChanges(true);
       return;
     }
 
@@ -275,9 +291,11 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
     setAllCompanies(prev => {
       const updated = prev.map(c => c.id === saved.id ? saved : c);
       writeCompanyCaches(updated);
+      onCompaniesChange?.(updated);
       return updated;
     });
     try { sessionStorage.setItem(`lean_company_${saved.id}`, JSON.stringify(saved)); } catch {}
+    setHasUnsavedChanges(false);
     setSaveState('saved');
     setSaveMessage('Saved to Supabase');
     window.setTimeout(() => setSaveState('idle'), 1400);
@@ -313,6 +331,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       setAllCompanies(prev => {
         const next = [company, ...prev].sort((a, b) => a.name.localeCompare(b.name));
         writeCompanyCaches(next);
+        onCompaniesChange?.(next);
         return next;
       });
       selectCompany(company);
@@ -323,28 +342,46 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   async function removeCompany() {
     if (!pendingDelete) return;
     const companyToDelete = pendingDelete;
+    const previousRows = rows;
+    const previousIndex = previousRows.findIndex(c => c.id === companyToDelete.id);
     setDeleteError('');
     setDeleting(true);
 
-    await supabase.from('candidates').update({ company_id: null }).eq('company_id', companyToDelete.id);
-    const { data: deletedRows, error } = await supabase.from('companies').delete().eq('id', companyToDelete.id).select('id');
+    const detachResult = await supabase.from('candidates').update({ company_id: null }).eq('company_id', companyToDelete.id);
+    if (detachResult.error) {
+      setDeleting(false);
+      setDeleteError(`Could not detach linked candidates: ${detachResult.error.message}`);
+      return;
+    }
+
+    const { data: deletedRows, error } = await supabase
+      .from('companies')
+      .delete()
+      .eq('id', companyToDelete.id)
+      .select('id');
 
     setDeleting(false);
     if (error) { setDeleteError(error.message); return; }
     if (!deletedRows || deletedRows.length === 0) {
-      setDeleteError('No company was deleted. Please refresh and try again.');
+      setDeleteError('No company was deleted in Supabase. Please refresh and try again.');
       return;
     }
 
-    setAllCompanies(prev => {
-      const next = prev.filter(c => c.id !== companyToDelete.id);
-      writeCompanyCaches(next);
-      const replacement = next[0] || null;
-      setSelectedId(replacement?.id || null);
-      setDraft(replacement);
-      return next;
-    });
+    const nextAll = allCompanies.filter(c => c.id !== companyToDelete.id);
+    const nextVisibleRows = previousRows.filter(c => c.id !== companyToDelete.id);
+    const replacement = nextVisibleRows[Math.min(Math.max(previousIndex, 0), nextVisibleRows.length - 1)] || nextAll[0] || null;
+
+    clearCompanyCaches();
+    writeCompanyCaches(nextAll);
+    setAllCompanies(nextAll);
+    onCompaniesChange?.(nextAll);
+    setSelectedId(replacement?.id || null);
+    setDraft(replacement);
+    try { sessionStorage.removeItem(`lean_company_${companyToDelete.id}`); } catch {}
     setPendingDelete(null);
+    setSaveState('saved');
+    setSaveMessage('Company deleted from Supabase');
+    window.setTimeout(() => setSaveState('idle'), 1600);
   }
 
   const totalTier1 = allCompanies.filter(c => c.priority_tier === 'Tier 1').length;
@@ -411,15 +448,17 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
                 </div>
               </div>
               <div className="save-indicator">
-                {saveState === 'saving' && <><Loader2 size={15} className="spin"/> Saving</>}
-                {saveState === 'saved' && <><CheckCircle2 size={15}/> Saved</>}
+                {saveState === 'saving' && <><Loader2 size={15} className="spin"/> {saveMessage || 'Saving to Supabase...'}</>}
+                {saveState === 'saved' && <><CheckCircle2 size={15}/> {saveMessage || 'Saved to Supabase'}</>}
                 {saveState === 'error' && <span className="save-error">{saveMessage}</span>}
+                {saveState === 'idle' && hasUnsavedChanges && <span className="save-pending">Unsaved changes</span>}
               </div>
             </div>
 
             <div className="company-action-strip">
               <a className="btn secondary" href={draft.website_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!draft.website_url} onClick={e => { if (!draft.website_url) e.preventDefault(); }}>Website <ExternalLink size={14}/></a>
               <a className="btn secondary" href={draft.linkedin_company_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!draft.linkedin_company_url} onClick={e => { if (!draft.linkedin_company_url) e.preventDefault(); }}>LinkedIn <ExternalLink size={14}/></a>
+              <button className="btn secondary" type="button" onClick={() => draft && saveCompany(draft)} disabled={saveState === 'saving'}><Save size={14}/> Save now</button>
               <button className="btn secondary danger-btn" onClick={() => { setPendingDelete(draft); setDeleteError(''); }}>Remove <Trash2 size={14}/></button>
             </div>
 

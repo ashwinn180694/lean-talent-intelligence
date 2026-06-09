@@ -6,7 +6,17 @@ import PageSkeleton from './PageSkeleton';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 
-const CACHE_KEY = 'lean_cache_companies_current';
+const COMPANY_CACHE_KEYS = ['lean_cache_companies_current', 'lean_cache_companies_v1', 'lean_cache_companies_v2_awesomefintech'];
+
+function writeCompanyCaches(companies: Company[]) {
+  try {
+    const serialized = JSON.stringify(companies);
+    COMPANY_CACHE_KEYS.forEach(key => {
+      sessionStorage.setItem(key, serialized);
+      localStorage.setItem(key, serialized);
+    });
+  } catch {}
+}
 
 export default function CompaniesPageClient() {
   const [companies, setCompanies] = useState<Company[] | null>(null);
@@ -14,7 +24,7 @@ export default function CompaniesPageClient() {
 
   useEffect(() => {
     try {
-      const cached = sessionStorage.getItem(CACHE_KEY) || localStorage.getItem(CACHE_KEY);
+      const cached = sessionStorage.getItem(COMPANY_CACHE_KEYS[0]) || localStorage.getItem(COMPANY_CACHE_KEYS[0]);
       if (cached) setCompanies(JSON.parse(cached));
     } catch {}
 
@@ -23,11 +33,7 @@ export default function CompaniesPageClient() {
       const { data } = await supabase.from('companies').select('*').order('priority_tier').order('name');
       if (data) {
         setCompanies(data as Company[]);
-        try {
-          const serialized = JSON.stringify(data);
-          sessionStorage.setItem(CACHE_KEY, serialized);
-          localStorage.setItem(CACHE_KEY, serialized);
-        } catch {}
+        writeCompanyCaches(data as Company[]);
       }
       setRefreshing(false);
     }
@@ -36,6 +42,6 @@ export default function CompaniesPageClient() {
 
   return <>
     <div className="topbar"><div><h1 className="h1">Companies</h1><p className="muted">Focused fintech company universe with direct Website and LinkedIn links.</p></div>{refreshing && companies?.length ? <span className="sync-pill">Refreshing</span> : null}</div>
-    {companies ? <CompanyClient companies={companies}/> : <PageSkeleton />}
+    {companies ? <CompanyClient companies={companies} onCompaniesChange={setCompanies}/> : <PageSkeleton />}
   </>;
 }
