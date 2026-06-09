@@ -386,6 +386,25 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
 
   const totalTier1 = allCompanies.filter(c => c.priority_tier === 'Tier 1').length;
 
+  const similarCompanies = useMemo(() => {
+    if (!draft) return [] as Company[];
+    return allCompanies
+      .filter(c => c.id !== draft.id)
+      .map(c => {
+        let score = 0;
+        if ((c.sub_sector || '') === (draft.sub_sector || '')) score += 5;
+        if ((c.region || '') === (draft.region || '')) score += 2;
+        if ((c.country || '') && c.country === draft.country) score += 2;
+        if ((c.priority_tier || '') === (draft.priority_tier || '')) score += 1;
+        if (draft.lean_fit_score && c.lean_fit_score) score += Math.max(0, 2 - Math.abs((c.lean_fit_score || 0) - (draft.lean_fit_score || 0)));
+        return { company: c, score };
+      })
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score || (b.company.lean_fit_score || 0) - (a.company.lean_fit_score || 0) || a.company.name.localeCompare(b.company.name))
+      .slice(0, 6)
+      .map(item => item.company);
+  }, [allCompanies, draft]);
+
   return <>
     <section className="company-workspace-shell">
       <div className="company-workspace-hero card">
@@ -461,6 +480,16 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
               <button className="btn secondary" type="button" onClick={() => draft && saveCompany(draft)} disabled={saveState === 'saving'}><Save size={14}/> Save now</button>
               <button className="btn secondary danger-btn" onClick={() => { setPendingDelete(draft); setDeleteError(''); }}>Remove <Trash2 size={14}/></button>
             </div>
+
+            {similarCompanies.length > 0 && <div className="similar-company-panel">
+              <div className="section-kicker">Similar companies</div>
+              <div className="similar-company-grid">
+                {similarCompanies.map(company => <button key={company.id} className="similar-company-card" type="button" onClick={() => selectCompany(company)}>
+                  <strong>{company.name}</strong>
+                  <span>{company.sub_sector || 'Global Fintech'} · {company.region || 'Global'} · Fit {company.lean_fit_score || '-'}</span>
+                </button>)}
+              </div>
+            </div>}
 
             <div className="inline-edit-grid">
               <EditableSelect label="Category" value={draft.sub_sector || 'Global Fintech'} onChange={value => updateDraft('sub_sector', value)} options={ALLOWED_COMPANY_CATEGORIES} />
