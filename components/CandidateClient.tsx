@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase-browser';
 
 const STATUSES = ['Mapped','Contacted','Replied','Interested','Interviewing','Offer','Hired','Rejected'];
 const FUNCTIONS = ['Product','Engineering','Partnerships','Commercial','Operations','Compliance','Risk','Design','Data'];
+const COMPANY_CATEGORIES = ['Payments','Remittance','Lending','Trading, Crypto & Investing','Payments Infrastructure','OpenBanking','KSA','UAE','Global Fintech','Big Tech'];
+const COMPANY_REGIONS = ['KSA','UAE','MENA','Europe','North America','APAC','Africa','Global'];
 
 type CandidateForm = {
   full_name: string;
@@ -81,6 +83,11 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [drilldown, setDrilldown] = useState<{ title: string; rows: any[] } | null>(null);
+  const [companyOptions, setCompanyOptions] = useState<any[]>(companies || []);
+  const [companySearch, setCompanySearch] = useState('');
+  const [showCompanyCreator, setShowCompanyCreator] = useState(false);
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [newCompany, setNewCompany] = useState({ name: '', sub_sector: 'Global Fintech', region: 'Global', country: '', website_url: '', linkedin_company_url: '', lean_fit_score: 5, priority_tier: 'Tier 3' });
 
   useEffect(() => {
     setRows(initial || []);
@@ -90,6 +97,10 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       localStorage.setItem('lean_cache_candidates_v1', serialized);
     } catch {}
   }, [initial]);
+
+  useEffect(() => {
+    setCompanyOptions(companies || []);
+  }, [companies]);
 
   const owners = useMemo(() => Array.from(new Set(rows.map(r => r.owner_email).filter(Boolean))).sort(), [rows]);
   const filtered = useMemo(() => rows.filter(r => {
@@ -107,8 +118,66 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   }
 
   function enrichCandidate(data: any) {
-    const company = companies.find(c => c.id === data.company_id);
+    const company = companyOptions.find(c => c.id === data.company_id);
     return { ...data, company_name: company?.name || data.company_name || null };
+  }
+
+  function parsedCompanyName(parsed: any) {
+    return parsed?.experience?.find((exp: any) => exp.is_current && exp.company_name)?.company_name
+      || parsed?.experience?.find((exp: any) => exp.company_name)?.company_name
+      || '';
+  }
+
+  const filteredCompanyOptions = useMemo(() => {
+    const needle = companySearch.trim().toLowerCase();
+    const list = companyOptions || [];
+    if (!needle) return list.slice(0, 80);
+    return list.filter(c => `${c.name} ${c.sub_sector || ''} ${c.region || ''} ${c.country || ''}`.toLowerCase().includes(needle)).slice(0, 80);
+  }, [companyOptions, companySearch]);
+
+  const parsedCompanyMissing = useMemo(() => {
+    const name = parsedCompanyName(parsedCvData);
+    if (!name || form.company_id) return '';
+    const exists = companyOptions.some(c => String(c.name).trim().toLowerCase() === String(name).trim().toLowerCase());
+    return exists ? '' : name;
+  }, [parsedCvData, form.company_id, companyOptions]);
+
+  async function createCompanyAndSelect(target: 'add' | 'edit' = 'add', suggestedName?: string) {
+    const name = sanitizeText((suggestedName || newCompany.name || '').trim());
+    if (!name) return setError('Enter a company name first.');
+    const existing = companyOptions.find(c => String(c.name).trim().toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (target === 'edit') setEditForm(prev => ({ ...prev, company_id: existing.id })); else setForm(prev => ({ ...prev, company_id: existing.id }));
+      setShowCompanyCreator(false);
+      setCompanySearch(existing.name);
+      setMessage(`${existing.name} already exists and has been selected.`);
+      return;
+    }
+    setSavingCompany(true); setError(''); setMessage('');
+    const payload = sanitizeForSupabase({
+      name,
+      sector: 'Fintech',
+      sub_sector: newCompany.sub_sector || 'Global Fintech',
+      region: newCompany.region || 'Global',
+      country: newCompany.country || null,
+      website_url: normalizeUrl(newCompany.website_url || ''),
+      linkedin_company_url: normalizeUrl(newCompany.linkedin_company_url || ''),
+      lean_fit_score: Number(newCompany.lean_fit_score || 5),
+      priority_tier: newCompany.priority_tier || 'Tier 3',
+      recommended_functions: 'Product, Engineering, Partnerships, Commercial',
+      rationale: 'Added during candidate intake',
+      updated_at: new Date().toISOString()
+    });
+    const { data, error } = await supabase.from('companies').insert(payload).select('*').single();
+    setSavingCompany(false);
+    if (error) return setError(error.message);
+    setCompanyOptions(prev => [data, ...prev.filter(c => c.id !== data.id)]);
+    if (target === 'edit') setEditForm(prev => ({ ...prev, company_id: data.id })); else setForm(prev => ({ ...prev, company_id: data.id }));
+    setCompanySearch(data.name);
+    setShowCompanyCreator(false);
+    setNewCompany({ name: '', sub_sector: 'Global Fintech', region: 'Global', country: '', website_url: '', linkedin_company_url: '', lean_fit_score: 5, priority_tier: 'Tier 3' });
+    setMessage(`${data.name} added and selected.`);
+    await logActivity('added company during candidate intake', 'company', data.name);
   }
 
 
@@ -116,7 +185,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     const matchedCompany = parsed?.experience?.find((exp: any) => exp.is_current && exp.company_name)
       || parsed?.experience?.find((exp: any) => exp.company_name);
     const matchedCompanyRecord = matchedCompany?.company_name
-      ? companies.find(c => String(c.name).toLowerCase() === String(matchedCompany.company_name).toLowerCase())
+      ? companyOptions.find(c => String(c.name).toLowerCase() === String(matchedCompany.company_name).toLowerCase())
       : null;
     return {
       ...current,
@@ -141,7 +210,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       if (!response.ok) throw new Error(json?.error || 'Could not parse CV.');
       setParsedCvData(json.parsed || null);
       setForm(prev => mergeParsedIntoBlankFields(prev, json.parsed));
-      setMessage('CV parsed. Blank candidate fields were populated where possible.');
+      setMessage('CV parsed. Review the suggested fields before saving.');
     } catch (err: any) {
       setParsedCvData(null);
       setError(`CV attached, but automatic parsing failed: ${err?.message || 'Unknown error'}`);
@@ -297,7 +366,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       setError(''); setMessage('');
       const payload = (result.data as any[]).filter(r => r.Name || r.full_name).map(r => {
         const companyName = r.Company || r.company || r.company_name || '';
-        const company = companies.find(c => c.name.toLowerCase() === companyName.toLowerCase());
+        const company = companyOptions.find(c => c.name.toLowerCase() === companyName.toLowerCase());
         return {
           full_name: r.Name || r.full_name,
           title: r.Title || r.title || '',
@@ -348,7 +417,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
           <h2>Candidate database</h2>
           <p className="muted">Search, filter, update ownership, and move candidates through the sourcing pipeline.</p>
         </div>
-        <button className="btn add-candidate-top" onClick={() => { setForm(emptyForm(userEmail)); setCvFile(null); setParsedCvData(null); setShowAdd(true); }}><Plus size={16}/> Add Candidate</button>
+        <button className="btn add-candidate-top" onClick={() => { setForm(emptyForm(userEmail)); setCvFile(null); setParsedCvData(null); setCompanySearch(''); setShowCompanyCreator(false); setShowAdd(true); }}><Plus size={16}/> Add Candidate</button>
       </div>
 
       <div className="candidate-metrics-row">
@@ -368,7 +437,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
         </div>
         <div className="candidate-filter-grid">
           <input className="input" placeholder="Search by name, title, company, owner..." value={q} onChange={e => setQ(e.target.value)} />
-          <select className="select" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}><option value="All">All companies</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+          <select className="select" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}><option value="All">All companies</option>{companyOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
           <select className="select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option>All</option>{STATUSES.map(s => <option key={s}>{s}</option>)}</select>
           <select className="select" value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}><option>All</option>{owners.map(o => <option key={o}>{o}</option>)}</select>
         </div>
@@ -403,11 +472,35 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
 
     {showAdd && <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card">
-        <div className="modal-header"><div><h2>Add candidate</h2><p className="muted">Create a candidate without leaving this page.</p></div><button className="icon-btn" onClick={() => { setShowAdd(false); setCvFile(null); setParsedCvData(null); }} aria-label="Close"><X size={20}/></button></div>
+        <div className="modal-header"><div><h2>Add candidate</h2><p className="muted">Upload a CV, review parsed details, create a missing company, and save once everything looks right.</p></div><button className="icon-btn" onClick={() => { setShowAdd(false); setCvFile(null); setParsedCvData(null); setShowCompanyCreator(false); }} aria-label="Close"><X size={20}/></button></div>
         <form className="grid form-grid" onSubmit={addCandidate}>
           <label>Full name<input className="input" placeholder="Full name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
           <label>Title<input className="input" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
-          <label>Company<select className="select" value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+          <div className="candidate-company-picker full-span">
+            <div className="field-label">Company</div>
+            <div className="company-picker-shell">
+              <input className="input" placeholder="Search company or type a new one..." value={companySearch} onChange={e => { setCompanySearch(e.target.value); setNewCompany(prev => ({ ...prev, name: e.target.value })); }} />
+              <select className="select" value={form.company_id} onChange={e => { setForm({ ...form, company_id: e.target.value }); const selected = companyOptions.find(c => c.id === e.target.value); if (selected) setCompanySearch(selected.name); }}>
+                <option value="">Select company</option>{filteredCompanyOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="company-picker-actions">
+              <button className="btn secondary small" type="button" onClick={() => { setNewCompany(prev => ({ ...prev, name: companySearch || parsedCompanyMissing || prev.name })); setShowCompanyCreator(v => !v); }}><Plus size={13}/> {showCompanyCreator ? 'Hide new company form' : 'Add new company'}</button>
+              {parsedCompanyMissing && <button className="btn ghost small" type="button" onClick={() => { setNewCompany(prev => ({ ...prev, name: parsedCompanyMissing })); setShowCompanyCreator(true); }}>Create parsed company: {parsedCompanyMissing}</button>}
+            </div>
+            {showCompanyCreator && <div className="inline-company-create">
+              <div className="inline-company-create-head"><strong>Add company without leaving candidate intake</strong><span className="muted">It will be selected automatically.</span></div>
+              <div className="inline-company-grid">
+                <input className="input" placeholder="Company name" value={newCompany.name} onChange={e => setNewCompany({ ...newCompany, name: e.target.value })} />
+                <select className="select" value={newCompany.sub_sector} onChange={e => setNewCompany({ ...newCompany, sub_sector: e.target.value })}>{COMPANY_CATEGORIES.map(c => <option key={c}>{c}</option>)}</select>
+                <select className="select" value={newCompany.region} onChange={e => setNewCompany({ ...newCompany, region: e.target.value })}>{COMPANY_REGIONS.map(r => <option key={r}>{r}</option>)}</select>
+                <input className="input" placeholder="Country" value={newCompany.country} onChange={e => setNewCompany({ ...newCompany, country: e.target.value })} />
+                <input className="input" placeholder="Website URL" value={newCompany.website_url} onChange={e => setNewCompany({ ...newCompany, website_url: e.target.value })} />
+                <input className="input" placeholder="LinkedIn company URL" value={newCompany.linkedin_company_url} onChange={e => setNewCompany({ ...newCompany, linkedin_company_url: e.target.value })} />
+              </div>
+              <button className="btn small" type="button" disabled={savingCompany} onClick={() => createCompanyAndSelect('add')}>{savingCompany ? 'Adding...' : 'Add company & select'}</button>
+            </div>}
+          </div>
           <label>Location<input className="input" placeholder="Location" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></label>
           <label>Function<select className="select" value={form.function_area} onChange={e => setForm({ ...form, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
           <label>Seniority<input className="input" placeholder="Seniority" value={form.seniority} onChange={e => setForm({ ...form, seniority: e.target.value })} /></label>
@@ -421,7 +514,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
                 <div className="cv-upload-icon"><FileText size={20}/></div>
                 <div>
                   <strong>{cvFile ? cvFile.name : 'Upload CV while creating candidate'}</strong>
-                  <p className="muted">{cvFile ? (parsingCv ? 'Parsing CV and filling blank fields...' : 'This CV will upload on save. Parsed details have been applied to blank fields where possible.') : 'PDF, DOCX, or TXT. The platform will parse and populate blank fields automatically.'}</p>
+                  <p className="muted">{cvFile ? (parsingCv ? 'Parsing CV and preparing review suggestions...' : 'This CV will upload on save. Review parsed suggestions before saving.') : 'PDF, DOCX, or TXT. The platform will parse suggested details for review before save.'}</p>
                 </div>
               </div>
               <div className="cv-upload-actions">
@@ -431,14 +524,23 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
               </div>
             </div>
             {cvFile && <div className="cv-selected-actions">
-              <span className="success-pill">{parsingCv ? 'Parsing CV...' : parsedCvData ? 'CV parsed — blank fields populated. Click Save candidate & upload CV to finish.' : 'CV selected — click Save candidate & upload CV to finish.'}</span>
+              <span className="success-pill">{parsingCv ? 'Parsing CV...' : parsedCvData ? 'CV parsed — review suggestions below, edit anything, then save.' : 'CV selected — click Save candidate & upload CV to finish.'}</span>
             </div>}
-            {parsedCvData && <div className="cv-parse-preview"><strong>Parsed preview</strong><p className="muted">{[parsedCvData.title, parsedCvData.location, parsedCvData.skills?.slice?.(0, 4)?.join(', ')].filter(Boolean).join(' · ') || 'Parsed CV details captured.'}</p></div>}
+            {parsedCvData && <div className="cv-parse-preview cv-review-card">
+              <div className="cv-review-head"><strong>Review parsed details before saving</strong><span className="review-pill">Manual approval</span></div>
+              <div className="cv-review-grid">
+                <div><span className="muted">Detected title</span><strong>{parsedCvData.title || form.title || 'Not detected'}</strong></div>
+                <div><span className="muted">Detected company</span><strong>{parsedCompanyName(parsedCvData) || 'Not detected'}</strong></div>
+                <div><span className="muted">Location</span><strong>{parsedCvData.location || form.location || 'Not detected'}</strong></div>
+                <div><span className="muted">Skills</span><strong>{parsedCvData.skills?.slice?.(0, 5)?.join(', ') || 'Not detected'}</strong></div>
+              </div>
+              <p className="muted">Parsed information is used only when you click save. You can edit the fields above first.</p>
+            </div>}
           </div>
           <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
           <div className="modal-actions full-span candidate-save-actions">
             <button className="btn" type="submit" disabled={savingCandidate || parsingCv}>{cvFile ? <Upload size={14}/> : <Save size={14}/>} {savingCandidate ? 'Saving...' : parsingCv ? 'Parsing CV...' : (cvFile ? 'Save candidate & upload CV' : 'Save candidate')}</button>
-            <button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); setParsedCvData(null); }}>Cancel</button>
+            <button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); setParsedCvData(null); setShowCompanyCreator(false); }}>Cancel</button>
           </div>
         </form>
       </div>
@@ -450,7 +552,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
         <form className="grid form-grid" onSubmit={saveEdit}>
           <label>Full name<input className="input" value={editForm.full_name} onChange={e => setEditForm({ ...editForm, full_name: e.target.value })} required /></label>
           <label>Title<input className="input" value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })} /></label>
-          <label>Company<select className="select" value={editForm.company_id} onChange={e => setEditForm({ ...editForm, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+          <label>Company<select className="select" value={editForm.company_id} onChange={e => setEditForm({ ...editForm, company_id: e.target.value })}><option value="">Company</option>{companyOptions.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
           <label>Location<input className="input" value={editForm.location} onChange={e => setEditForm({ ...editForm, location: e.target.value })} /></label>
           <label>Function<select className="select" value={editForm.function_area} onChange={e => setEditForm({ ...editForm, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
           <label>Seniority<input className="input" value={editForm.seniority} onChange={e => setEditForm({ ...editForm, seniority: e.target.value })} /></label>
