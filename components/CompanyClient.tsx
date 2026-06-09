@@ -230,9 +230,10 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       return;
     }
 
-    const score = company.lean_fit_score === null || company.lean_fit_score === undefined || company.lean_fit_score === ''
+    const rawScore = company.lean_fit_score as number | string | null | undefined;
+    const score = rawScore === null || rawScore === undefined || String(rawScore).trim() === ''
       ? null
-      : Number(company.lean_fit_score);
+      : Number(rawScore);
 
     const updates = {
       name: company.name?.trim() || 'Untitled company',
