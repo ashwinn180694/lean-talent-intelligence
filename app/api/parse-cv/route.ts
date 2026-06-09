@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       const result = await mammoth.extractRawText({ buffer });
       text = result.value || '';
     } else if (name.endsWith('.pdf')) {
-      const pdfParseModule: any = await import('pdf-parse');
+      const pdfParseModule: any = await import('pdf-parse/lib/pdf-parse.js');
       const pdfParse = pdfParseModule.default || pdfParseModule;
       const result = await pdfParse(buffer);
       text = result.text || '';
