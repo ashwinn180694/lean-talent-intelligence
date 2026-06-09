@@ -16,6 +16,23 @@ function normalizeUrl(value: string) {
   return `https://${trimmed}`;
 }
 
+function sanitizeText(value: string) {
+  return value
+    .normalize('NFKC')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uD800-\uDFFF]/g, ' ')
+    .replace(/[ \u00A0]{2,}/g, ' ')
+    .trim();
+}
+
+function sanitizeForSupabase(value: any): any {
+  if (typeof value === 'string') return sanitizeText(value);
+  if (Array.isArray(value)) return value.map(sanitizeForSupabase).filter(v => v !== '');
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeForSupabase(v)]));
+  }
+  return value;
+}
+
 function toArray(value: any): string[] {
   if (Array.isArray(value)) return value.filter(Boolean);
   if (!value) return [];
@@ -184,7 +201,7 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
   }
 
   async function updateCandidate(payload: any, timelineTitle: string, timelineDescription = '', timelineType = 'profile') {
-    const { data, error } = await supabase.from('candidates').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', candidateId).select('*').single();
+    const { data, error } = await supabase.from('candidates').update(sanitizeForSupabase({ ...payload, updated_at: new Date().toISOString() })).eq('id', candidateId).select('*').single();
     if (error) { setError(error.message); return null; }
     const company = companies.find(c => c.id === data.company_id);
     const next = { ...data, company_name: company?.name || candidate?.company_name || null };
@@ -257,7 +274,7 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
       const response = await fetch('/api/parse-cv', { method: 'POST', body: data });
       const json = await response.json();
       if (!response.ok) throw new Error(json?.error || 'Could not parse CV.');
-      const parsed = normalizeParsedPreview(json.parsed || null, json.parsed?.parsed_cv_text || '');
+      const parsed = sanitizeForSupabase(normalizeParsedPreview(json.parsed || null, json.parsed?.parsed_cv_text || ''));
       setSelectedCvParsed(parsed);
       setCvText(parsed?.parsed_cv_text || '');
       setMessage('CV parsed. Review the suggestions below, then choose whether to save parsed details.');

@@ -28,6 +28,23 @@ function normalizeUrl(value: string) {
   return `https://${trimmed}`;
 }
 
+function sanitizeText(value: string) {
+  return value
+    .normalize('NFKC')
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uD800-\uDFFF]/g, ' ')
+    .replace(/[ \u00A0]{2,}/g, ' ')
+    .trim();
+}
+
+function sanitizeForSupabase(value: any): any {
+  if (typeof value === 'string') return sanitizeText(value);
+  if (Array.isArray(value)) return value.map(sanitizeForSupabase).filter(v => v !== '');
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, sanitizeForSupabase(v)]));
+  }
+  return value;
+}
+
 function emptyForm(userEmail: string): CandidateForm {
   return { full_name: '', title: '', company_id: '', location: '', function_area: 'Product', seniority: 'Senior', linkedin_url: '', status: 'Mapped', owner_email: userEmail, notes: '' };
 }
@@ -187,12 +204,12 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       parsed_cv_text: parsedCvData?.parsed_cv_text || null,
       updated_at: new Date().toISOString()
     };
-    const { data, error } = await supabase.from('candidates').insert(payload).select('*').single();
+    const { data, error } = await supabase.from('candidates').insert(sanitizeForSupabase(payload)).select('*').single();
     if (!error && data) {
       try {
         if (cvFile) await attachCv(data.id, data.full_name, cvFile);
         if (parsedCvData?.experience?.length) {
-          await supabase.from('candidate_experience').insert(parsedCvData.experience.slice(0, 8).map((exp: any, index: number) => ({
+          await supabase.from('candidate_experience').insert(sanitizeForSupabase(parsedCvData.experience.slice(0, 8).map((exp: any, index: number) => ({
             candidate_id: data.id,
             company_name: exp.company_name || 'Unknown company',
             title: exp.title || null,
@@ -201,7 +218,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
             is_current: Boolean(exp.is_current),
             notes: exp.notes || 'Extracted from CV parser',
             sort_order: index
-          })));
+          }))));
         }
         setRows([enrichCandidate(data), ...rows]);
         setForm(emptyForm(userEmail));
@@ -249,7 +266,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       notes: editForm.notes.trim() || null,
       updated_at: new Date().toISOString()
     };
-    const { data, error } = await supabase.from('candidates').update(payload).eq('id', editingId).select('*').single();
+    const { data, error } = await supabase.from('candidates').update(sanitizeForSupabase(payload)).eq('id', editingId).select('*').single();
     if (error) return setError(error.message);
     const next = enrichCandidate(data);
     setRows(prev => prev.map(r => r.id === editingId ? next : r));
@@ -296,7 +313,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
         };
       });
       if (!payload.length) return setError('No candidates found in this CSV.');
-      const { data, error } = await supabase.from('candidates').insert(payload).select('*');
+      const { data, error } = await supabase.from('candidates').insert(sanitizeForSupabase(payload)).select('*');
       if (error) setError(error.message); else {
         logActivity(`imported ${payload.length} candidates`, 'candidate', 'CSV import');
         setRows(prev => [...(data || []).map(enrichCandidate), ...prev]);
