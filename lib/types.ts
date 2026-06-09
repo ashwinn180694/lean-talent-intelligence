@@ -41,6 +41,10 @@ export type Candidate = {
   cv_summary?: string | null;
   parsed_cv_text?: string | null;
   relationship_score?: number | null;
+  relationship_notes?: string | null;
+  last_interaction_at?: string | null;
+  next_follow_up_at?: string | null;
+  warmth_level?: string | null;
   previous_company?: string | null;
   skills?: string[] | null;
   tags?: string[] | null;

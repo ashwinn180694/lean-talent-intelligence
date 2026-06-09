@@ -95,9 +95,6 @@ function fitTone(score?: number | null) {
   return 'low';
 }
 
-function sourceLabel(c: Company) {
-  return c.awesomefintech_rank || c.source || 'Fintech universe';
-}
 
 function EditableText({ label, value, onChange, placeholder = '', multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; multiline?: boolean }) {
   return <label className="inline-edit-field">
@@ -411,7 +408,7 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
         <div>
           <div className="eyebrow"><Sparkles size={15}/> Talent Intelligence Workspace</div>
           <h2>Company universe</h2>
-          <p className="muted">Move with arrow keys, edit directly, and let changes auto-save into Supabase.</p>
+          <p className="muted">Move with arrow keys, edit directly, and save updates into Supabase.</p>
         </div>
         <div className="company-header-actions">
           <button className="btn" onClick={() => setShowAdd(true)}><Plus size={16}/> Add Company</button>
@@ -463,7 +460,7 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
                 <div className={`category-orb ${categoryClass(draft.sub_sector)}`}></div>
                 <div>
                   <input className="company-title-input" value={draft.name || ''} onChange={e => updateDraft('name', e.target.value)} />
-                  <div className="detail-subtitle">{draft.country || draft.region || 'Global'} · {sourceLabel(draft)}</div>
+                  <div className="detail-subtitle">{draft.sub_sector || 'Global Fintech'} · {draft.country || draft.region || 'Global'}</div>
                 </div>
               </div>
               <div className="save-indicator">
@@ -534,7 +531,6 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
           <label>Country<input className="input" value={form.country} onChange={e => updateField('country', e.target.value)} /></label>
           <label>Website<input className="input" value={form.website_url} onChange={e => updateField('website_url', e.target.value)} /></label>
           <label>LinkedIn<input className="input" value={form.linkedin_company_url} onChange={e => updateField('linkedin_company_url', e.target.value)} /></label>
-          <label>Source URL<input className="input" value={form.source_url} onChange={e => updateField('source_url', e.target.value)} /></label>
           <label>Recommended functions<input className="input" value={form.recommended_functions} onChange={e => updateField('recommended_functions', e.target.value)} /></label>
         </div>
         <label>Market notes / rationale<textarea className="textarea" value={form.rationale} onChange={e => updateField('rationale', e.target.value)} /></label>

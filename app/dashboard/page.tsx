@@ -11,9 +11,12 @@ export default async function Dashboard() {
     supabase.from('talent_pools').select('*', { count: 'exact', head: true }),
     supabase.from('companies').select('*', { count: 'exact', head: true }).eq('priority_tier', 'Tier 1')
   ]);
-  const [{ data: recent }, { data: activity }] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const soon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [{ data: recent }, { data: activity }, { data: followups }] = await Promise.all([
     supabase.from('candidates_view').select('*').order('created_at', { ascending: false }).limit(6),
-    supabase.from('activity_feed').select('*').order('created_at', { ascending: false }).limit(8)
+    supabase.from('activity_feed').select('*').order('created_at', { ascending: false }).limit(8),
+    supabase.from('candidates_view').select('id,full_name,title,company_name,status,next_follow_up_at,owner_email').not('next_follow_up_at', 'is', null).lte('next_follow_up_at', soon).order('next_follow_up_at', { ascending: true }).limit(8)
   ]);
   return <AppShell>
     <div className="topbar"><div><h1 className="h1">Dashboard</h1><p className="muted">Shared recruiting intelligence for Lean Talent Partners.</p></div></div>
@@ -29,6 +32,12 @@ export default async function Dashboard() {
         <table className="table"><thead><tr><th>Name</th><th>Company</th><th>Function</th><th>Status</th></tr></thead><tbody>
           {(recent || []).map((c: any) => <tr key={c.id}><td><Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link></td><td>{c.company_id ? <Link className="table-link" href={`/companies/${c.company_id}`}>{c.company_name}</Link> : c.company_name}</td><td>{c.function_area}</td><td><span className="status-pill">{c.status}</span></td></tr>)}
         </tbody></table>
+      </div>
+      <div className="card">
+        <h2>Follow-ups due</h2>
+        <div className="activity-list">
+          {(followups || []).length ? (followups || []).map((c: any) => <div key={c.id} className="activity-item"><strong><Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link></strong><span> {c.next_follow_up_at <= today ? 'due now' : 'due soon'}</span><div className="muted">{c.next_follow_up_at} · {c.company_name || 'No company'} · {c.owner_email || 'No owner'}</div></div>) : <p className="muted">No follow-ups due in the next 7 days.</p>}
+        </div>
       </div>
       <div className="card">
         <h2>Activity feed</h2>

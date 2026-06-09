@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, Pencil, Save, Trash2, X, Upload, FileText, Briefcase, History, Sparkles, Plus, Download, RefreshCw, GraduationCap, Tags, Languages, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Pencil, Save, Trash2, X, Upload, FileText, Briefcase, History, Sparkles, Plus, Download, RefreshCw, GraduationCap, Tags, Languages, CheckCircle2, CalendarDays, HeartHandshake } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 
 const STATUSES = ['Mapped','Contacted','Replied','Interested','Interviewing','Offer','Hired','Rejected'];
@@ -36,6 +36,10 @@ function toForm(candidate: any, userEmail: string) {
     owner_email: candidate?.owner_email || userEmail || '',
     previous_company: candidate?.previous_company || '',
     relationship_score: candidate?.relationship_score ?? 0,
+    warmth_level: candidate?.warmth_level || 'Neutral',
+    last_interaction_at: candidate?.last_interaction_at || '',
+    next_follow_up_at: candidate?.next_follow_up_at || '',
+    relationship_notes: candidate?.relationship_notes || '',
     cv_summary: candidate?.cv_summary || '',
     parsed_cv_text: candidate?.parsed_cv_text || '',
     notes: candidate?.notes || '',
@@ -98,6 +102,7 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
   const [showExperienceModal, setShowExperienceModal] = useState(false);
   const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showEducationModal, setShowEducationModal] = useState(false);
+  const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [cvText, setCvText] = useState('');
   const [selectedCvFile, setSelectedCvFile] = useState<File | null>(null);
   const [fileUploading, setFileUploading] = useState(false);
@@ -180,6 +185,10 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
       location: form.location.trim() || null, function_area: form.function_area || null, seniority: form.seniority.trim() || null,
       linkedin_url: normalizeUrl(form.linkedin_url || ''), status: form.status || 'Mapped', owner_email: form.owner_email.trim() || userEmail || null,
       previous_company: form.previous_company.trim() || null, relationship_score: Number(form.relationship_score || 0),
+      warmth_level: form.warmth_level || 'Neutral',
+      last_interaction_at: form.last_interaction_at || null,
+      next_follow_up_at: form.next_follow_up_at || null,
+      relationship_notes: form.relationship_notes?.trim() || null,
       cv_summary: form.cv_summary.trim() || null, parsed_cv_text: form.parsed_cv_text.trim() || null,
       ashby_candidate_id: form.ashby_candidate_id.trim() || null, notes: form.notes.trim() || null
     };
@@ -195,6 +204,22 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
     const old = candidate.status || 'Mapped';
     const next = await updateCandidate({ status }, `Status changed to ${status}`, `Previous status: ${old}`, 'status');
     if (next) logActivity(`moved candidate to ${status}`, candidate.full_name);
+  }
+
+  async function saveRelationship(e: React.FormEvent) {
+    e.preventDefault();
+    const payload = {
+      relationship_score: Number(form.relationship_score || 0),
+      warmth_level: form.warmth_level || 'Neutral',
+      last_interaction_at: form.last_interaction_at || null,
+      next_follow_up_at: form.next_follow_up_at || null,
+      relationship_notes: form.relationship_notes?.trim() || null
+    };
+    const next = await updateCandidate(payload, 'Relationship details updated', `Warmth: ${payload.warmth_level}. Next follow-up: ${payload.next_follow_up_at || 'not set'}.`, 'relationship');
+    if (!next) return;
+    setShowRelationshipModal(false);
+    setMessage('Relationship details updated.');
+    logActivity('updated candidate relationship details', next.full_name);
   }
 
   async function deleteCandidate() {
@@ -335,19 +360,33 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
         <div className="muted">Candidate intelligence profile</div>
         <h1 className="h1">{candidate.full_name}</h1>
         <p className="muted">{candidate.title || 'No title'} {candidate.company_name ? `· ${candidate.company_name}` : ''}</p>
-        <div className="toolbar" style={{ marginBottom: 0 }}><span className="status-pill">{candidate.status || 'Mapped'}</span><span className="pill">{candidate.function_area || 'Unassigned'}</span><span className="pill">Owner: {candidate.owner_email || '-'}</span><span className="pill">Relationship: {candidate.relationship_score ?? 0}/10</span></div>
+        <div className="toolbar" style={{ marginBottom: 0 }}><span className="status-pill">{candidate.status || 'Mapped'}</span><span className="pill">{candidate.function_area || 'Unassigned'}</span><span className="pill">Owner: {candidate.owner_email || '-'}</span><span className="pill">Relationship: {candidate.relationship_score ?? 0}/10</span><span className="pill">{candidate.warmth_level || 'Neutral'}</span><span className="pill">Next: {candidate.next_follow_up_at || '-'}</span></div>
       </div>
-      <div className="actions"><button className="btn" onClick={() => setEditing(true)}><Pencil size={14}/> Edit profile</button><button className="btn secondary" onClick={() => setShowCvModal(true)}><Upload size={14}/> Upload CV</button><button className="btn secondary danger-text" onClick={deleteCandidate}><Trash2 size={14}/> Delete</button></div>
+      <div className="actions"><button className="btn" onClick={() => setEditing(true)}><Pencil size={14}/> Edit profile</button><button className="btn secondary" onClick={() => setShowRelationshipModal(true)}><HeartHandshake size={14}/> Relationship</button><button className="btn secondary" onClick={() => setShowCvModal(true)}><Upload size={14}/> Upload CV</button><button className="btn secondary danger-text" onClick={deleteCandidate}><Trash2 size={14}/> Delete</button></div>
     </div>
 
     <div className="grid grid-4">
       <div className="card"><div className="muted">Company</div>{candidate.company_id ? <Link className="table-link" href={`/companies/${candidate.company_id}`}>{candidate.company_name}</Link> : <strong>-</strong>}</div>
-      <div className="card"><div className="muted">Previous company</div><strong>{candidate.previous_company || '-'}</strong></div>
-      <div className="card"><div className="muted">Location</div><strong>{candidate.location || '-'}</strong></div>
+      <div className="card"><div className="muted">Relationship</div><strong>{candidate.relationship_score ?? 0}/10</strong><p className="muted">{candidate.warmth_level || 'Neutral'}</p></div>
+      <div className="card"><div className="muted">Next follow-up</div><strong>{candidate.next_follow_up_at || '-'}</strong><p className="muted">Last: {candidate.last_interaction_at || '-'}</p></div>
       <div className="card"><div className="muted">Profile completeness</div><strong>{completeness.score}%</strong><div className="completeness-bar"><span style={{ width: `${completeness.score}%` }} /></div></div>
     </div>
 
     {completeness.missing.length > 0 && <div className="card compact-card"><strong>Missing intelligence</strong><p className="muted">Add: {completeness.missing.slice(0, 8).join(', ')}{completeness.missing.length > 8 ? '…' : ''}</p></div>}
+
+    <details className="card intelligence-section" open>
+      <summary><HeartHandshake size={18}/> Relationship & Follow-up</summary>
+      <div className="section-body">
+        <div className="company-detail-grid">
+          <div><div className="muted">Relationship score</div><strong>{candidate.relationship_score ?? 0}/10</strong></div>
+          <div><div className="muted">Warmth</div><strong>{candidate.warmth_level || 'Neutral'}</strong></div>
+          <div><div className="muted">Last interaction</div><strong>{candidate.last_interaction_at || '-'}</strong></div>
+          <div><div className="muted">Next follow-up</div><strong>{candidate.next_follow_up_at || '-'}</strong></div>
+        </div>
+        {candidate.relationship_notes ? <p className="preserve-lines">{candidate.relationship_notes}</p> : <p className="muted">No relationship notes yet. Add relationship context, follow-up timing, and warmth level.</p>}
+        <button className="btn secondary" onClick={() => setShowRelationshipModal(true)}><CalendarDays size={14}/> Edit relationship</button>
+      </div>
+    </details>
 
     <div className="card">
       <h2>Status pipeline</h2>
@@ -422,8 +461,10 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
     </details>
 
     {editing && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card"><div className="modal-header"><div><h2>Edit candidate</h2><p className="muted">Update candidate details, owner, company mapping, relationship score, and intelligence summary.</p></div><button className="icon-btn" onClick={() => setEditing(false)}><X size={20}/></button></div><form className="grid form-grid" onSubmit={save}>
-      <label>Full name<input className="input" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label><label>Title<input className="input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label><label>Company<select className="select" value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Previous company<input className="input" value={form.previous_company} onChange={e => setForm({ ...form, previous_company: e.target.value })} /></label><label>Location<input className="input" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></label><label>Function<select className="select" value={form.function_area} onChange={e => setForm({ ...form, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label><label>Seniority<input className="input" value={form.seniority} onChange={e => setForm({ ...form, seniority: e.target.value })} /></label><label>Owner<input className="input" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label><label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label><label>Relationship score<input className="input" type="number" min="0" max="10" value={form.relationship_score} onChange={e => setForm({ ...form, relationship_score: e.target.value })} /></label><label className="full-span">LinkedIn URL<input className="input" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label><label className="full-span">Ashby candidate ID<input className="input" value={form.ashby_candidate_id} onChange={e => setForm({ ...form, ashby_candidate_id: e.target.value })} placeholder="Optional for future Ashby sync" /></label><label className="full-span">CV / recruiter summary<textarea value={form.cv_summary} onChange={e => setForm({ ...form, cv_summary: e.target.value })} /></label><label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label><div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save changes</button><button className="btn secondary" type="button" onClick={() => setEditing(false)}>Cancel</button></div>
+      <label>Full name<input className="input" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label><label>Title<input className="input" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label><label>Company<select className="select" value={form.company_id} onChange={e => setForm({ ...form, company_id: e.target.value })}><option value="">Company</option>{companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Previous company<input className="input" value={form.previous_company} onChange={e => setForm({ ...form, previous_company: e.target.value })} /></label><label>Location<input className="input" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></label><label>Function<select className="select" value={form.function_area} onChange={e => setForm({ ...form, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label><label>Seniority<input className="input" value={form.seniority} onChange={e => setForm({ ...form, seniority: e.target.value })} /></label><label>Owner<input className="input" value={form.owner_email} onChange={e => setForm({ ...form, owner_email: e.target.value })} /></label><label>Status<select className="select" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label><label>Relationship score<input className="input" type="number" min="0" max="10" value={form.relationship_score} onChange={e => setForm({ ...form, relationship_score: e.target.value })} /></label><label>Warmth<select className="select" value={form.warmth_level} onChange={e => setForm({ ...form, warmth_level: e.target.value })}><option>Cold</option><option>Neutral</option><option>Warm</option><option>Hot</option></select></label><label>Last interaction<input className="input" type="date" value={form.last_interaction_at} onChange={e => setForm({ ...form, last_interaction_at: e.target.value })} /></label><label>Next follow-up<input className="input" type="date" value={form.next_follow_up_at} onChange={e => setForm({ ...form, next_follow_up_at: e.target.value })} /></label><label className="full-span">LinkedIn URL<input className="input" value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} /></label><label className="full-span">Ashby candidate ID<input className="input" value={form.ashby_candidate_id} onChange={e => setForm({ ...form, ashby_candidate_id: e.target.value })} placeholder="Optional for future Ashby sync" /></label><label className="full-span">CV / recruiter summary<textarea value={form.cv_summary} onChange={e => setForm({ ...form, cv_summary: e.target.value })} /></label><label className="full-span">Relationship notes<textarea value={form.relationship_notes} onChange={e => setForm({ ...form, relationship_notes: e.target.value })} /></label><label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label><div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save changes</button><button className="btn secondary" type="button" onClick={() => setEditing(false)}>Cancel</button></div>
     </form></div></div>}
+
+    {showRelationshipModal && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card"><div className="modal-header"><div><h2>Relationship & follow-up</h2><p className="muted">Track candidate warmth, last interaction, and the next follow-up date. No outreach log is created.</p></div><button className="icon-btn" onClick={() => setShowRelationshipModal(false)}><X size={20}/></button></div><form className="grid form-grid" onSubmit={saveRelationship}><label>Relationship score<input className="input" type="number" min="0" max="10" value={form.relationship_score} onChange={e => setForm({ ...form, relationship_score: e.target.value })} /></label><label>Warmth<select className="select" value={form.warmth_level} onChange={e => setForm({ ...form, warmth_level: e.target.value })}><option>Cold</option><option>Neutral</option><option>Warm</option><option>Hot</option></select></label><label>Last interaction<input className="input" type="date" value={form.last_interaction_at} onChange={e => setForm({ ...form, last_interaction_at: e.target.value })} /></label><label>Next follow-up<input className="input" type="date" value={form.next_follow_up_at} onChange={e => setForm({ ...form, next_follow_up_at: e.target.value })} /></label><label className="full-span">Relationship notes<textarea value={form.relationship_notes} onChange={e => setForm({ ...form, relationship_notes: e.target.value })} placeholder="Relationship context, preferences, relocation interest, compensation signals, or follow-up notes." /></label><div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save relationship</button><button className="btn secondary" type="button" onClick={() => setShowRelationshipModal(false)}>Cancel</button></div></form></div></div>}
 
     {showCvModal && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card"><div className="modal-header"><div><h2>Upload CV & parse candidate details</h2><p className="muted">Attach a CV to this candidate profile. Paste CV text below to extract skills, tags, languages, education signals, LinkedIn URL, previous company, and profile summary.</p></div><button className="icon-btn" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); }}><X size={20}/></button></div><div className="cv-upload-box"><div><strong>Candidate CV</strong><p className="muted">PDF, DOC, DOCX, or TXT. The file is saved privately in Supabase Storage.</p></div><label className="btn secondary" style={{ cursor: 'pointer' }}><Upload size={14}/> Choose CV<input type="file" accept=".pdf,.doc,.docx,.txt" style={{ display: 'none' }} onChange={e => setSelectedCvFile(e.target.files?.[0] || null)} /></label></div>{selectedCvFile && <div className="success"><strong>CV attached:</strong> {selectedCvFile.name}<button className="inline-link" type="button" onClick={() => setSelectedCvFile(null)}>Remove</button></div>}{fileUploading && <div className="success">Uploading CV...</div>}<label>Paste CV text for parsing<textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Paste CV text here to extract summary, skills, LinkedIn URL, education signals, languages, and company mentions." /></label><div className="modal-actions"><button className="btn" disabled={!selectedCvFile || fileUploading} onClick={() => selectedCvFile && uploadCv(selectedCvFile)} type="button"><Upload size={14}/> {fileUploading ? 'Uploading...' : 'Upload selected CV'}</button><button className="btn secondary" onClick={applyCvParse} type="button"><Sparkles size={14}/> Parse pasted CV text</button><button className="btn secondary" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); }} type="button">Close</button></div></div></div>}
 

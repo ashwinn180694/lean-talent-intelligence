@@ -48,7 +48,7 @@ export default function GlobalSearch() {
       setLoading(true);
       const [{ data: companyRows }, { data: candidateRows }, { data: poolRows }] = await Promise.all([
         supabase.from('companies').select('id,name,sub_sector,region,country,priority_tier,lean_fit_score').order('name').limit(1200),
-        supabase.from('candidates_view').select('id,full_name,title,company_name,function_area,status,owner_email').order('updated_at', { ascending: false }).limit(1200),
+        supabase.from('candidates_view').select('id,full_name,title,company_name,function_area,status,owner_email,warmth_level,next_follow_up_at,relationship_notes,tags').order('updated_at', { ascending: false }).limit(1200),
         supabase.from('talent_pools').select('id,name,description').order('name').limit(300)
       ]);
       if (companyRows) {
@@ -100,13 +100,13 @@ export default function GlobalSearch() {
       }));
 
     const candidateResults = candidates
-      .filter(c => `${c.full_name} ${c.title || ''} ${c.company_name || ''} ${c.function_area || ''} ${c.status || ''} ${c.owner_email || ''}`.toLowerCase().includes(q))
+      .filter(c => `${c.full_name} ${c.title || ''} ${c.company_name || ''} ${c.function_area || ''} ${c.status || ''} ${c.owner_email || ''} ${c.warmth_level || ''} ${c.next_follow_up_at || ''} ${c.relationship_notes || ''} ${(c.tags || []).join(' ')}`.toLowerCase().includes(q))
       .slice(0, 8)
       .map(c => ({
         id: `candidate-${c.id}`,
         type: 'Candidate' as const,
         title: c.full_name,
-        subtitle: `${c.title || 'Candidate'} · ${c.company_name || 'No company'} · ${c.status || 'Mapped'}`,
+        subtitle: `${c.title || 'Candidate'} · ${c.company_name || 'No company'} · ${c.status || 'Mapped'}${c.next_follow_up_at ? ` · Follow-up ${c.next_follow_up_at}` : ''}`, 
         href: `/candidates/${c.id}`
       }));
 
