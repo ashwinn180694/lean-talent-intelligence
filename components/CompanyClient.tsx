@@ -224,7 +224,16 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
   }
 
   async function saveCompany(company: Company) {
-    const score = company.lean_fit_score ? Number(company.lean_fit_score) : null;
+    if (!company?.id) {
+      setSaveState('error');
+      setSaveMessage('Missing company ID. Refresh and try again.');
+      return;
+    }
+
+    const score = company.lean_fit_score === null || company.lean_fit_score === undefined || company.lean_fit_score === ''
+      ? null
+      : Number(company.lean_fit_score);
+
     const updates = {
       name: company.name?.trim() || 'Untitled company',
       sector: company.sector || 'FinTech',
@@ -232,20 +241,34 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
       region: company.region || 'Global',
       country: company.country || null,
       hq: company.hq || null,
-      website_url: company.website_url ? cleanUrl(company.website_url) : null,
-      linkedin_company_url: company.linkedin_company_url ? cleanUrl(company.linkedin_company_url) : null,
-      lean_fit_score: score,
+      website_url: company.website_url ? cleanUrl(String(company.website_url)) : null,
+      linkedin_company_url: company.linkedin_company_url ? cleanUrl(String(company.linkedin_company_url)) : null,
+      lean_fit_score: Number.isFinite(score as number) ? score : null,
       priority_tier: company.priority_tier || null,
       recommended_functions: company.recommended_functions || null,
       rationale: company.rationale || null,
       updated_at: new Date().toISOString()
     };
-    const { data, error } = await supabase.from('companies').update(updates).eq('id', company.id).select('*').single();
+
+    const { data, error } = await supabase
+      .from('companies')
+      .update(updates)
+      .eq('id', company.id)
+      .select('*')
+      .maybeSingle();
+
     if (error) {
       setSaveState('error');
-      setSaveMessage(error.message);
+      setSaveMessage(`Save failed: ${error.message}`);
       return;
     }
+
+    if (!data) {
+      setSaveState('error');
+      setSaveMessage('Save failed: Supabase did not update this company. Please check company update permissions.');
+      return;
+    }
+
     const saved = data as Company;
     setDraft(saved);
     setAllCompanies(prev => {
@@ -255,7 +278,7 @@ export default function CompanyClient({ companies }: { companies: Company[] }) {
     });
     try { sessionStorage.setItem(`lean_company_${saved.id}`, JSON.stringify(saved)); } catch {}
     setSaveState('saved');
-    setSaveMessage('Saved');
+    setSaveMessage('Saved to Supabase');
     window.setTimeout(() => setSaveState('idle'), 1400);
   }
 
