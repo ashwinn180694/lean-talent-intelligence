@@ -56,6 +56,8 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   const [form, setForm] = useState<CandidateForm>(emptyForm(userEmail));
   const [showAdd, setShowAdd] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [parsedCvData, setParsedCvData] = useState<any | null>(null);
+  const [parsingCv, setParsingCv] = useState(false);
   const [savingCandidate, setSavingCandidate] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<CandidateForm>(emptyForm(userEmail));
@@ -90,6 +92,51 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   function enrichCandidate(data: any) {
     const company = companies.find(c => c.id === data.company_id);
     return { ...data, company_name: company?.name || data.company_name || null };
+  }
+
+
+  function mergeParsedIntoBlankFields(current: CandidateForm, parsed: any): CandidateForm {
+    const matchedCompany = parsed?.experience?.find((exp: any) => exp.is_current && exp.company_name)
+      || parsed?.experience?.find((exp: any) => exp.company_name);
+    const matchedCompanyRecord = matchedCompany?.company_name
+      ? companies.find(c => String(c.name).toLowerCase() === String(matchedCompany.company_name).toLowerCase())
+      : null;
+    return {
+      ...current,
+      full_name: current.full_name || parsed?.full_name || '',
+      title: current.title || parsed?.title || matchedCompany?.title || '',
+      company_id: current.company_id || matchedCompanyRecord?.id || '',
+      location: current.location || parsed?.location || '',
+      linkedin_url: current.linkedin_url || parsed?.linkedin_url || '',
+      seniority: current.seniority || (parsed?.title && /head|director|vp|chief|lead|senior/i.test(parsed.title) ? 'Senior' : current.seniority),
+      notes: current.notes || (parsed?.cv_summary ? `Auto-parsed from CV:\n${parsed.cv_summary}` : current.notes)
+    };
+  }
+
+  async function parseCandidateCv(file: File) {
+    setParsingCv(true);
+    setError('');
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      const response = await fetch('/api/parse-cv', { method: 'POST', body: data });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json?.error || 'Could not parse CV.');
+      setParsedCvData(json.parsed || null);
+      setForm(prev => mergeParsedIntoBlankFields(prev, json.parsed));
+      setMessage('CV parsed. Blank candidate fields were populated where possible.');
+    } catch (err: any) {
+      setParsedCvData(null);
+      setError(`CV attached, but automatic parsing failed: ${err?.message || 'Unknown error'}`);
+    } finally {
+      setParsingCv(false);
+    }
+  }
+
+  async function handleCandidateCvSelect(file: File | null) {
+    setCvFile(file);
+    setParsedCvData(null);
+    if (file) await parseCandidateCv(file);
   }
 
   async function attachCv(candidateId: string, candidateName: string, file: File) {
@@ -131,15 +178,35 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       linkedin_url: normalizeUrl(form.linkedin_url),
       owner_email: form.owner_email.trim() || userEmail || null,
       notes: form.notes.trim() || null,
+      previous_company: parsedCvData?.previous_company || null,
+      skills: parsedCvData?.skills || [],
+      tags: parsedCvData?.tags || [],
+      languages: parsedCvData?.languages || [],
+      education: parsedCvData?.education || [],
+      cv_summary: parsedCvData?.cv_summary || null,
+      parsed_cv_text: parsedCvData?.parsed_cv_text || null,
       updated_at: new Date().toISOString()
     };
     const { data, error } = await supabase.from('candidates').insert(payload).select('*').single();
     if (!error && data) {
       try {
         if (cvFile) await attachCv(data.id, data.full_name, cvFile);
+        if (parsedCvData?.experience?.length) {
+          await supabase.from('candidate_experience').insert(parsedCvData.experience.slice(0, 8).map((exp: any, index: number) => ({
+            candidate_id: data.id,
+            company_name: exp.company_name || 'Unknown company',
+            title: exp.title || null,
+            start_date: exp.start_date || null,
+            end_date: exp.end_date || null,
+            is_current: Boolean(exp.is_current),
+            notes: exp.notes || 'Extracted from CV parser',
+            sort_order: index
+          })));
+        }
         setRows([enrichCandidate(data), ...rows]);
         setForm(emptyForm(userEmail));
         setCvFile(null);
+        setParsedCvData(null);
         setShowAdd(false);
         setMessage(cvFile ? 'Candidate added and CV uploaded.' : 'Candidate added.');
         logActivity('added candidate', 'candidate', data.full_name);
@@ -147,6 +214,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
         setRows([enrichCandidate(data), ...rows]);
         setForm(emptyForm(userEmail));
         setCvFile(null);
+        setParsedCvData(null);
         setShowAdd(false);
         setError(`Candidate added, but CV upload failed: ${cvError?.message || 'Unknown error'}`);
       } finally {
@@ -263,7 +331,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
           <h2>Candidate database</h2>
           <p className="muted">Search, filter, update ownership, and move candidates through the sourcing pipeline.</p>
         </div>
-        <button className="btn add-candidate-top" onClick={() => { setForm(emptyForm(userEmail)); setCvFile(null); setShowAdd(true); }}><Plus size={16}/> Add Candidate</button>
+        <button className="btn add-candidate-top" onClick={() => { setForm(emptyForm(userEmail)); setCvFile(null); setParsedCvData(null); setShowAdd(true); }}><Plus size={16}/> Add Candidate</button>
       </div>
 
       <div className="candidate-metrics-row">
@@ -318,7 +386,7 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
 
     {showAdd && <div className="modal-backdrop" role="dialog" aria-modal="true">
       <div className="modal-card">
-        <div className="modal-header"><div><h2>Add candidate</h2><p className="muted">Create a candidate without leaving this page.</p></div><button className="icon-btn" onClick={() => { setShowAdd(false); setCvFile(null); }} aria-label="Close"><X size={20}/></button></div>
+        <div className="modal-header"><div><h2>Add candidate</h2><p className="muted">Create a candidate without leaving this page.</p></div><button className="icon-btn" onClick={() => { setShowAdd(false); setCvFile(null); setParsedCvData(null); }} aria-label="Close"><X size={20}/></button></div>
         <form className="grid form-grid" onSubmit={addCandidate}>
           <label>Full name<input className="input" placeholder="Full name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} required /></label>
           <label>Title<input className="input" placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /></label>
@@ -336,23 +404,24 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
                 <div className="cv-upload-icon"><FileText size={20}/></div>
                 <div>
                   <strong>{cvFile ? cvFile.name : 'Upload CV while creating candidate'}</strong>
-                  <p className="muted">{cvFile ? 'This CV will be uploaded to the candidate profile when you save.' : 'PDF, DOC, DOCX, or TXT. You can parse details later from the candidate profile.'}</p>
+                  <p className="muted">{cvFile ? (parsingCv ? 'Parsing CV and filling blank fields...' : 'This CV will upload on save. Parsed details have been applied to blank fields where possible.') : 'PDF, DOCX, or TXT. The platform will parse and populate blank fields automatically.'}</p>
                 </div>
               </div>
               <div className="cv-upload-actions">
                 <label className="btn secondary cv-upload-button" htmlFor="candidate-cv-upload"><Upload size={14}/> {cvFile ? 'Change CV' : 'Upload CV'}</label>
-                <input id="candidate-cv-upload" className="sr-only-file" type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => setCvFile(e.target.files?.[0] || null)} />
-                {cvFile && <button className="btn secondary small" type="button" onClick={() => setCvFile(null)}>Remove</button>}
+                <input id="candidate-cv-upload" className="sr-only-file" type="file" accept=".pdf,.doc,.docx,.txt" onChange={e => handleCandidateCvSelect(e.target.files?.[0] || null)} />
+                {cvFile && <button className="btn secondary small" type="button" onClick={() => { setCvFile(null); setParsedCvData(null); }}>Remove</button>}
               </div>
             </div>
             {cvFile && <div className="cv-selected-actions">
-              <span className="success-pill">CV selected — click <strong>Save candidate & upload CV</strong> to finish.</span>
+              <span className="success-pill">{parsingCv ? 'Parsing CV...' : parsedCvData ? 'CV parsed — blank fields populated. Click Save candidate & upload CV to finish.' : 'CV selected — click Save candidate & upload CV to finish.'}</span>
             </div>}
+            {parsedCvData && <div className="cv-parse-preview"><strong>Parsed preview</strong><p className="muted">{[parsedCvData.title, parsedCvData.location, parsedCvData.skills?.slice?.(0, 4)?.join(', ')].filter(Boolean).join(' · ') || 'Parsed CV details captured.'}</p></div>}
           </div>
           <label className="full-span">Notes<textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></label>
           <div className="modal-actions full-span candidate-save-actions">
-            <button className="btn" type="submit" disabled={savingCandidate}>{cvFile ? <Upload size={14}/> : <Save size={14}/>} {savingCandidate ? 'Saving...' : (cvFile ? 'Save candidate & upload CV' : 'Save candidate')}</button>
-            <button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); }}>Cancel</button>
+            <button className="btn" type="submit" disabled={savingCandidate || parsingCv}>{cvFile ? <Upload size={14}/> : <Save size={14}/>} {savingCandidate ? 'Saving...' : parsingCv ? 'Parsing CV...' : (cvFile ? 'Save candidate & upload CV' : 'Save candidate')}</button>
+            <button className="btn secondary" type="button" onClick={() => { setShowAdd(false); setCvFile(null); setParsedCvData(null); }}>Cancel</button>
           </div>
         </form>
       </div>

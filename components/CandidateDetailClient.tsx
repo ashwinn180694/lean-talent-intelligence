@@ -71,6 +71,21 @@ function parseCvText(text: string, companies: any[]) {
   return { skills, matchedCompanies, linkedin, summary, languages: languageMatches, educationLines };
 }
 
+function normalizeParsedPreview(parsed: any, fallbackText = '') {
+  if (!parsed) return null;
+  return {
+    ...parsed,
+    parsed_cv_text: parsed.parsed_cv_text || fallbackText || '',
+    cv_summary: parsed.cv_summary || parsed.summary || (fallbackText ? fallbackText.slice(0, 700) : ''),
+    skills: parsed.skills || [],
+    tags: parsed.tags || [],
+    languages: parsed.languages || [],
+    education: parsed.education || (parsed.educationLines || []).map((line: string, index: number) => ({ school: line, degree: '', field: '', start_year: '', end_year: '', notes: index === 0 ? 'Extracted from pasted CV text' : '' })),
+    experience: parsed.experience || [],
+    previous_company: parsed.previous_company || parsed.matchedCompanies?.[0] || ''
+  };
+}
+
 function computeCompleteness(candidate: any, documents: any[], experience: any[], applications: any[]) {
   const checks = [
     Boolean(candidate?.full_name), Boolean(candidate?.title), Boolean(candidate?.company_id), Boolean(candidate?.linkedin_url),
@@ -105,6 +120,8 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
   const [showRelationshipModal, setShowRelationshipModal] = useState(false);
   const [cvText, setCvText] = useState('');
   const [selectedCvFile, setSelectedCvFile] = useState<File | null>(null);
+  const [selectedCvParsed, setSelectedCvParsed] = useState<any | null>(null);
+  const [fileParsing, setFileParsing] = useState(false);
   const [fileUploading, setFileUploading] = useState(false);
   const [experienceForm, setExperienceForm] = useState<any>({ id: '', company_name: '', title: '', start_date: '', end_date: '', is_current: false, notes: '' });
   const [applicationForm, setApplicationForm] = useState<any>({ id: '', role_title: '', status: 'Mapped', source: 'Talent Intelligence', ashby_application_id: '', applied_at: '', notes: '' });
@@ -230,9 +247,81 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
     window.location.href = '/candidates';
   }
 
+
+  async function parseCvFile(file: File) {
+    setFileParsing(true);
+    setError('');
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      const response = await fetch('/api/parse-cv', { method: 'POST', body: data });
+      const json = await response.json();
+      if (!response.ok) throw new Error(json?.error || 'Could not parse CV.');
+      const parsed = normalizeParsedPreview(json.parsed || null, json.parsed?.parsed_cv_text || '');
+      setSelectedCvParsed(parsed);
+      setCvText(parsed?.parsed_cv_text || '');
+      setMessage('CV parsed. Review the suggestions below, then choose whether to save parsed details.');
+      return json.parsed;
+    } catch (err: any) {
+      setSelectedCvParsed(null);
+      setError(`CV selected, but automatic parsing failed: ${err?.message || 'Unknown error'}`);
+      return null;
+    } finally {
+      setFileParsing(false);
+    }
+  }
+
+  async function handleProfileCvSelect(file: File | null) {
+    setSelectedCvFile(file);
+    setSelectedCvParsed(null);
+    if (file) await parseCvFile(file);
+  }
+
+  async function applyParsedCvToCandidate(parsed: any, fileName: string) {
+    if (!parsed || !candidate) return;
+    const mergedSkills = Array.from(new Set([...skills, ...(parsed.skills || [])]));
+    const mergedTags = Array.from(new Set([...tags, ...(parsed.tags || [])]));
+    const mergedLanguages = Array.from(new Set([...languages, ...(parsed.languages || [])]));
+    const nextEducation = education.length ? education : (parsed.education || []);
+    const currentExperienceCompanies = new Set(experience.map((exp: any) => String(exp.company_name || '').toLowerCase()));
+    const newExperience = (parsed.experience || []).filter((exp: any) => exp.company_name && !currentExperienceCompanies.has(String(exp.company_name).toLowerCase())).slice(0, 8);
+    const matchedCurrent = parsed.experience?.find?.((exp: any) => exp.is_current && exp.company_name);
+    const matchedCompanyRecord = matchedCurrent?.company_name
+      ? companies.find(c => String(c.name).toLowerCase() === String(matchedCurrent.company_name).toLowerCase())
+      : null;
+    const payload: any = {
+      parsed_cv_text: parsed.parsed_cv_text || candidate.parsed_cv_text || null,
+      cv_summary: parsed.cv_summary || candidate.cv_summary || null,
+      skills: mergedSkills,
+      tags: mergedTags,
+      languages: mergedLanguages,
+      education: nextEducation,
+      previous_company: candidate.previous_company || parsed.previous_company || null
+    };
+    if (!candidate.title && (parsed.title || matchedCurrent?.title)) payload.title = parsed.title || matchedCurrent?.title;
+    if (!candidate.linkedin_url && parsed.linkedin_url) payload.linkedin_url = parsed.linkedin_url;
+    if (!candidate.location && parsed.location) payload.location = parsed.location;
+    if (!candidate.company_id && matchedCompanyRecord?.id) payload.company_id = matchedCompanyRecord.id;
+    const next = await updateCandidate(payload, 'CV parsed and profile fields updated', fileName, 'cv');
+    if (next && newExperience.length) {
+      const { data: expRows } = await supabase.from('candidate_experience').insert(newExperience.map((exp: any, index: number) => ({
+        candidate_id: candidateId,
+        company_name: exp.company_name || 'Unknown company',
+        title: exp.title || null,
+        start_date: exp.start_date || null,
+        end_date: exp.end_date || null,
+        is_current: Boolean(exp.is_current),
+        notes: exp.notes || 'Extracted from CV parser',
+        sort_order: experience.length + index
+      }))).select('*');
+      if (expRows) setExperience(prev => [...expRows, ...prev]);
+    }
+  }
+
   async function uploadCv(file: File) {
     if (!file || !candidate) return;
     setFileUploading(true); setError(''); setMessage('');
+    const parsed = selectedCvParsed || await parseCvFile(file);
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const path = `${candidate.id}/${Date.now()}-${safeName}`;
     const { error: uploadError } = await supabase.storage.from('candidate-cvs').upload(path, file, { upsert: false });
@@ -241,24 +330,38 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
     const { data, error } = await supabase.from('candidate_documents').insert({ candidate_id: candidate.id, file_name: file.name, file_path: path, file_url: signed?.signedUrl || null, file_type: file.type || 'unknown', uploaded_by: userEmail || null }).select('*').single();
     if (error) { setFileUploading(false); return setError(error.message); }
     setDocuments(prev => [data, ...prev]);
-    setSelectedCvFile(null); setFileUploading(false); setMessage('CV uploaded.');
+    setSelectedCvFile(null); setFileUploading(false); setMessage(parsed ? 'CV uploaded. Parsed suggestions are still available for review — click Save parsed details if they look correct.' : 'CV uploaded.');
     addTimeline('CV uploaded', file.name, 'cv');
     logActivity('uploaded candidate CV', candidate.full_name);
   }
 
+  async function saveParsedCvDetails() {
+    if (!selectedCvParsed) return setError('Parse or choose a CV first.');
+    setError(''); setMessage('');
+    await applyParsedCvToCandidate(selectedCvParsed, selectedCvFile?.name || 'CV text');
+    setMessage('Parsed CV details saved to candidate profile.');
+  }
+
+  async function removeCv(doc: any) {
+    if (!confirm(`Remove ${doc.file_name}? This deletes the CV file from storage and the candidate profile.`)) return;
+    setError(''); setMessage('');
+    if (doc.file_path) {
+      const { error: storageError } = await supabase.storage.from('candidate-cvs').remove([doc.file_path]);
+      if (storageError) return setError(storageError.message);
+    }
+    const { error } = await supabase.from('candidate_documents').delete().eq('id', doc.id);
+    if (error) return setError(error.message);
+    setDocuments(prev => prev.filter(item => item.id !== doc.id));
+    setMessage('CV removed.');
+    addTimeline('CV removed', doc.file_name, 'cv');
+    if (candidate) logActivity('removed candidate CV', candidate.full_name);
+  }
+
   async function applyCvParse() {
     if (!cvText.trim()) return setError('Paste CV text first, then run parser.');
-    const parsed = parseCvText(cvText, companies);
-    const mergedSkills = Array.from(new Set([...skills, ...parsed.skills]));
-    const mergedLanguages = Array.from(new Set([...languages, ...parsed.languages]));
-    const previousCompany = parsed.matchedCompanies.find(name => name !== candidate?.company_name) || candidate?.previous_company || '';
-    const suggestedEducation = education.length ? education : parsed.educationLines.map((line, index) => ({ school: line, degree: '', field: '', start_year: '', end_year: '', notes: index === 0 ? 'Extracted from pasted CV text' : '' }));
-    const payload: any = { parsed_cv_text: cvText, cv_summary: parsed.summary || cvText.slice(0, 700), skills: mergedSkills, languages: mergedLanguages, education: suggestedEducation };
-    if (parsed.linkedin && !candidate?.linkedin_url) payload.linkedin_url = parsed.linkedin;
-    if (previousCompany) payload.previous_company = previousCompany;
-    const next = await updateCandidate(payload, 'CV text parsed', `Detected ${mergedSkills.length} skills${previousCompany ? ` and previous company ${previousCompany}` : ''}.`, 'cv');
-    if (!next) return;
-    setMessage('CV text parsed and candidate intelligence updated.');
+    const parsed = normalizeParsedPreview(parseCvText(cvText, companies), cvText);
+    setSelectedCvParsed(parsed);
+    setMessage('CV text parsed. Review the suggestions, then click Save parsed details to update the candidate profile.');
   }
 
   async function addListValue(field: 'skills' | 'tags' | 'languages', value: string) {
@@ -425,7 +528,7 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
       <summary><FileText size={18}/> CV & Documents</summary>
       <div className="section-body">
         <div className="actions"><button className="btn" onClick={() => setShowCvModal(true)}><Upload size={14}/> Upload CV / Parse text</button></div>
-        <div className="note-list">{documents.length ? documents.map(doc => <div className="note-item" key={doc.id}><strong>{doc.file_name}</strong><p className="muted">Uploaded by {doc.uploaded_by || '-'} · {new Date(doc.created_at).toLocaleString()}</p>{doc.file_url && <a className="btn secondary" href={doc.file_url} target="_blank" rel="noreferrer">Open CV <Download size={14}/></a>}</div>) : <div className="empty-state"><FileText size={24}/><p>No CV uploaded yet.</p></div>}</div>
+        <div className="note-list">{documents.length ? documents.map(doc => <div className="note-item" key={doc.id}><strong>{doc.file_name}</strong><p className="muted">Uploaded by {doc.uploaded_by || '-'} · {new Date(doc.created_at).toLocaleString()}</p><div className="actions">{doc.file_url && <a className="btn secondary" href={doc.file_url} target="_blank" rel="noreferrer">Open CV <Download size={14}/></a>}<button className="btn secondary danger-text" type="button" onClick={() => removeCv(doc)}><Trash2 size={14}/> Remove CV</button></div></div>) : <div className="empty-state"><FileText size={24}/><p>No CV uploaded yet.</p></div>}</div>
       </div>
     </details>
 
@@ -466,7 +569,7 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
 
     {showRelationshipModal && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card"><div className="modal-header"><div><h2>Relationship & follow-up</h2><p className="muted">Track candidate warmth, last interaction, and the next follow-up date. No outreach log is created.</p></div><button className="icon-btn" onClick={() => setShowRelationshipModal(false)}><X size={20}/></button></div><form className="grid form-grid" onSubmit={saveRelationship}><label>Relationship score<input className="input" type="number" min="0" max="10" value={form.relationship_score} onChange={e => setForm({ ...form, relationship_score: e.target.value })} /></label><label>Warmth<select className="select" value={form.warmth_level} onChange={e => setForm({ ...form, warmth_level: e.target.value })}><option>Cold</option><option>Neutral</option><option>Warm</option><option>Hot</option></select></label><label>Last interaction<input className="input" type="date" value={form.last_interaction_at} onChange={e => setForm({ ...form, last_interaction_at: e.target.value })} /></label><label>Next follow-up<input className="input" type="date" value={form.next_follow_up_at} onChange={e => setForm({ ...form, next_follow_up_at: e.target.value })} /></label><label className="full-span">Relationship notes<textarea value={form.relationship_notes} onChange={e => setForm({ ...form, relationship_notes: e.target.value })} placeholder="Relationship context, preferences, relocation interest, compensation signals, or follow-up notes." /></label><div className="modal-actions full-span"><button className="btn" type="submit"><Save size={14}/> Save relationship</button><button className="btn secondary" type="button" onClick={() => setShowRelationshipModal(false)}>Cancel</button></div></form></div></div>}
 
-    {showCvModal && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card"><div className="modal-header"><div><h2>Upload CV & parse candidate details</h2><p className="muted">Attach a CV to this candidate profile. Paste CV text below to extract skills, tags, languages, education signals, LinkedIn URL, previous company, and profile summary.</p></div><button className="icon-btn" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); }}><X size={20}/></button></div><div className="cv-upload-box"><div><strong>Candidate CV</strong><p className="muted">PDF, DOC, DOCX, or TXT. The file is saved privately in Supabase Storage.</p></div><label className="btn secondary" style={{ cursor: 'pointer' }}><Upload size={14}/> Choose CV<input type="file" accept=".pdf,.doc,.docx,.txt" style={{ display: 'none' }} onChange={e => setSelectedCvFile(e.target.files?.[0] || null)} /></label></div>{selectedCvFile && <div className="success"><strong>CV attached:</strong> {selectedCvFile.name}<button className="inline-link" type="button" onClick={() => setSelectedCvFile(null)}>Remove</button></div>}{fileUploading && <div className="success">Uploading CV...</div>}<label>Paste CV text for parsing<textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Paste CV text here to extract summary, skills, LinkedIn URL, education signals, languages, and company mentions." /></label><div className="modal-actions"><button className="btn" disabled={!selectedCvFile || fileUploading} onClick={() => selectedCvFile && uploadCv(selectedCvFile)} type="button"><Upload size={14}/> {fileUploading ? 'Uploading...' : 'Upload selected CV'}</button><button className="btn secondary" onClick={applyCvParse} type="button"><Sparkles size={14}/> Parse pasted CV text</button><button className="btn secondary" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); }} type="button">Close</button></div></div></div>}
+    {showCvModal && <div className="modal-backdrop" role="dialog" aria-modal="true"><div className="modal-card"><div className="modal-header"><div><h2>Upload CV & review parsed details</h2><p className="muted">Attach a CV or paste CV text. Parsing creates suggestions only — nothing is saved to the profile until you click Save parsed details.</p></div><button className="icon-btn" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); setSelectedCvParsed(null); }}><X size={20}/></button></div><div className="cv-upload-box"><div><strong>Candidate CV</strong><p className="muted">PDF, DOC, DOCX, or TXT. The file is saved privately in Supabase Storage. Parsed details remain in review mode until approved.</p></div><label className="btn secondary" style={{ cursor: 'pointer' }}><Upload size={14}/> Choose CV<input type="file" accept=".pdf,.doc,.docx,.txt" style={{ display: 'none' }} onChange={e => handleProfileCvSelect(e.target.files?.[0] || null)} /></label></div>{selectedCvFile && <div className="success"><strong>CV attached:</strong> {selectedCvFile.name}<button className="inline-link" type="button" onClick={() => { setSelectedCvFile(null); setSelectedCvParsed(null); }}>Remove</button></div>}{fileParsing && <div className="success">Parsing CV and preparing review suggestions...</div>}{selectedCvParsed && <div className="cv-parse-preview"><strong>Review parsed suggestions before saving</strong><p className="muted">{[selectedCvParsed.title, selectedCvParsed.location, selectedCvParsed.skills?.slice?.(0, 5)?.join(', ')].filter(Boolean).join(' · ') || 'Parsed CV details captured.'}</p><div className="pill-row">{selectedCvParsed.previous_company && <span className="tag-pill">Previous: {selectedCvParsed.previous_company}</span>}{selectedCvParsed.languages?.slice?.(0,3)?.map((lang: string) => <span className="tag-pill" key={lang}>{lang}</span>)}</div></div>}{fileUploading && <div className="success">Uploading CV...</div>}<label>Paste CV text for parsing<textarea value={cvText} onChange={e => setCvText(e.target.value)} placeholder="Paste CV text here to extract summary, skills, LinkedIn URL, education signals, languages, and company mentions." /></label><div className="modal-actions"><button className="btn" disabled={!selectedCvFile || fileUploading || fileParsing} onClick={() => selectedCvFile && uploadCv(selectedCvFile)} type="button"><Upload size={14}/> {fileUploading ? 'Uploading...' : fileParsing ? 'Parsing...' : 'Upload CV only'}</button><button className="btn secondary" onClick={applyCvParse} type="button"><Sparkles size={14}/> Parse pasted text for review</button><button className="btn" disabled={!selectedCvParsed || fileUploading || fileParsing} onClick={saveParsedCvDetails} type="button"><Save size={14}/> Save parsed details</button><button className="btn secondary" onClick={() => { setShowCvModal(false); setSelectedCvFile(null); setSelectedCvParsed(null); }} type="button">Close</button></div></div></div>}
 
     {showExperienceModal && <div className="modal-backdrop"><div className="modal-card"><div className="modal-header"><div><h2>{experienceForm.id ? 'Edit' : 'Add'} experience</h2><p className="muted">Capture previous companies and role history.</p></div><button className="icon-btn" onClick={() => setShowExperienceModal(false)}><X size={20}/></button></div><form className="grid form-grid" onSubmit={addExperience}><label>Company<input className="input" value={experienceForm.company_name} onChange={e => setExperienceForm({ ...experienceForm, company_name: e.target.value })} required /></label><label>Title<input className="input" value={experienceForm.title} onChange={e => setExperienceForm({ ...experienceForm, title: e.target.value })} /></label><label>Start<input className="input" placeholder="2021" value={experienceForm.start_date} onChange={e => setExperienceForm({ ...experienceForm, start_date: e.target.value })} /></label><label>End<input className="input" placeholder="2024 or Present" value={experienceForm.end_date} onChange={e => setExperienceForm({ ...experienceForm, end_date: e.target.value })} /></label><label className="full-span checkbox-row"><input type="checkbox" checked={experienceForm.is_current} onChange={e => setExperienceForm({ ...experienceForm, is_current: e.target.checked })}/> Current role</label><label className="full-span">Notes<textarea value={experienceForm.notes} onChange={e => setExperienceForm({ ...experienceForm, notes: e.target.value })} /></label><div className="modal-actions full-span"><button className="btn" type="submit">Save experience</button><button className="btn secondary" type="button" onClick={() => setShowExperienceModal(false)}>Cancel</button></div></form></div></div>}
 
