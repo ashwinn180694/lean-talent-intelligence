@@ -13,13 +13,16 @@ export default async function Dashboard() {
   ]);
   const today = new Date().toISOString().slice(0, 10);
   const soon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const [{ data: recent }, { data: activity }, { data: followups }] = await Promise.all([
+  const [{ data: recent }, { data: activity }, { data: followups }, { data: profiles }] = await Promise.all([
     supabase.from('candidates_view').select('*').order('created_at', { ascending: false }).limit(6),
     supabase.from('activity_feed').select('*').order('created_at', { ascending: false }).limit(8),
-    supabase.from('candidates_view').select('id,full_name,title,company_name,status,next_follow_up_at,owner_email').not('next_follow_up_at', 'is', null).lte('next_follow_up_at', soon).order('next_follow_up_at', { ascending: true }).limit(8)
+    supabase.from('candidates_view').select('id,full_name,title,company_name,status,next_follow_up_at,owner_email').not('next_follow_up_at', 'is', null).lte('next_follow_up_at', soon).order('next_follow_up_at', { ascending: true }).limit(8),
+    supabase.from('user_profiles').select('email,display_name')
   ]);
+  const profileMap = new Map((profiles || []).map((p: any) => [p.email, p.display_name]));
+  const personName = (email?: string | null) => email ? (profileMap.get(email) || email.split('@')[0].replace(/[._-]+/g, ' ')) : 'Unassigned';
   return <AppShell>
-    <div className="topbar"><div><h1 className="h1">Dashboard</h1><p className="muted">Shared recruiting intelligence for Lean Talent Partners.</p></div></div>
+    <div className="page-hero v11-page-hero"><div><p className="eyebrow">Talent workspace</p><h1 className="h1">Dashboard</h1><p className="muted">Shared recruiting intelligence for Lean Talent Partners.</p></div></div>
     <div className="grid grid-4">
       <Link className="card metric-card" href="/companies"><div className="muted">Companies</div><div className="stat">{companies ?? 0}</div><span className="metric-hint">Open companies</span></Link>
       <Link className="card metric-card" href="/companies"><div className="muted">Tier 1 Companies</div><div className="stat">{tier1 ?? 0}</div><span className="metric-hint">Filter Tier 1</span></Link>
@@ -36,13 +39,13 @@ export default async function Dashboard() {
       <div className="card">
         <h2>Follow-ups due</h2>
         <div className="activity-list">
-          {(followups || []).length ? (followups || []).map((c: any) => <div key={c.id} className="activity-item"><strong><Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link></strong><span> {c.next_follow_up_at <= today ? 'due now' : 'due soon'}</span><div className="muted">{c.next_follow_up_at} · {c.company_name || 'No company'} · {c.owner_email || 'No owner'}</div></div>) : <p className="muted">No follow-ups due in the next 7 days.</p>}
+          {(followups || []).length ? (followups || []).map((c: any) => <div key={c.id} className="activity-item"><strong><Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link></strong><span> {c.next_follow_up_at <= today ? 'due now' : 'due soon'}</span><div className="muted">{c.next_follow_up_at} · {c.company_name || 'No company'} · {personName(c.owner_email)}</div></div>) : <p className="muted">No follow-ups due in the next 7 days.</p>}
         </div>
       </div>
       <div className="card">
         <h2>Activity feed</h2>
         <div className="activity-list">
-          {(activity || []).length ? (activity || []).map((item: any) => <div key={item.id} className="activity-item"><strong>{item.actor_email || 'Someone'}</strong> {item.action} <span>{item.entity_name}</span><div className="muted">{new Date(item.created_at).toLocaleString()}</div></div>) : <p className="muted">No activity yet. Edits, notes, and new candidates will appear here.</p>}
+          {(activity || []).length ? (activity || []).map((item: any) => <div key={item.id} className="activity-item"><strong>{personName(item.actor_email)}</strong> {item.action} <span>{item.entity_name}</span><div className="muted">{new Date(item.created_at).toLocaleString()}</div></div>) : <p className="muted">No activity yet. Edits, notes, and new candidates will appear here.</p>}
         </div>
       </div>
     </div>
