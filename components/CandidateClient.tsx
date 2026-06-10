@@ -72,6 +72,8 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
   const [statusFilter, setStatusFilter] = useState('All');
   const [ownerFilter, setOwnerFilter] = useState('All');
   const [companyFilter, setCompanyFilter] = useState('All');
+  const [selectedId, setSelectedId] = useState<string | null>((initial || [])[0]?.id || null);
+  const [candidateWorkspaceTab, setCandidateWorkspaceTab] = useState<'overview' | 'intelligence' | 'timeline'>('overview');
   const [form, setForm] = useState<CandidateForm>(emptyForm(userEmail));
   const [showAdd, setShowAdd] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
@@ -110,6 +112,38 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
       && (ownerFilter === 'All' || r.owner_email === ownerFilter)
       && (companyFilter === 'All' || r.company_id === companyFilter);
   }), [rows, q, statusFilter, ownerFilter, companyFilter]);
+
+  const selectedCandidate = useMemo(() => {
+    if (!filtered.length) return null;
+    return filtered.find(r => r.id === selectedId) || filtered[0];
+  }, [filtered, selectedId]);
+
+  useEffect(() => {
+    if (!filtered.length) {
+      setSelectedId(null);
+      return;
+    }
+    if (!selectedId || !filtered.some(r => r.id === selectedId)) {
+      setSelectedId(filtered[0].id);
+    }
+  }, [filtered, selectedId]);
+
+  useEffect(() => {
+    function handleCandidateKeys(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && ['INPUT','TEXTAREA','SELECT'].includes(target.tagName)) return;
+      if (!filtered.length) return;
+      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      event.preventDefault();
+      const currentIndex = Math.max(0, filtered.findIndex(r => r.id === (selectedId || selectedCandidate?.id)));
+      const nextIndex = event.key === 'ArrowDown'
+        ? Math.min(filtered.length - 1, currentIndex + 1)
+        : Math.max(0, currentIndex - 1);
+      setSelectedId(filtered[nextIndex]?.id || null);
+    }
+    window.addEventListener('keydown', handleCandidateKeys);
+    return () => window.removeEventListener('keydown', handleCandidateKeys);
+  }, [filtered, selectedId, selectedCandidate?.id]);
 
   const statusCounts = useMemo(() => STATUSES.map(status => ({ status, count: rows.filter(r => r.status === status).length })), [rows]);
 
@@ -395,6 +429,93 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
     setDrilldown({ title, rows });
   }
 
+  function relationshipTone(candidate: any) {
+    const score = Number(candidate?.relationship_score || 0);
+    if (score >= 8) return 'strong';
+    if (score >= 5) return 'warm';
+    return 'cold';
+  }
+
+  function completenessScore(candidate: any) {
+    if (!candidate) return 0;
+    const checks = [
+      candidate.full_name,
+      candidate.title,
+      candidate.company_id || candidate.company_name,
+      candidate.linkedin_url,
+      candidate.location,
+      candidate.function_area,
+      candidate.status,
+      candidate.owner_email,
+      candidate.cv_summary || candidate.parsed_cv_text,
+      (candidate.skills || []).length,
+      (candidate.tags || []).length,
+      candidate.next_follow_up_date || candidate.last_interaction_date
+    ];
+    return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+  }
+
+  function candidateDetailWorkspace(candidate: any) {
+    if (!candidate) {
+      return <div className="candidate-workspace-empty card"><Users size={34}/><h3>No candidate selected</h3><p className="muted">Select a candidate from the left panel or add a new candidate.</p></div>;
+    }
+    const completeness = completenessScore(candidate);
+    const skills = Array.isArray(candidate.skills) ? candidate.skills : [];
+    const tags = Array.isArray(candidate.tags) ? candidate.tags : [];
+    const languages = Array.isArray(candidate.languages) ? candidate.languages : [];
+    return <section className="candidate-workspace-detail card">
+      <div className="candidate-workspace-hero">
+        <div>
+          <p className="eyebrow">Candidate workspace</p>
+          <h2>{candidate.full_name}</h2>
+          <p>{candidate.title || 'No title'} {candidate.company_name ? `· ${candidate.company_name}` : ''}</p>
+          <div className="candidate-workspace-badges">
+            <span className={`status-chip status-${String(candidate.status || 'Mapped').toLowerCase()}`}>{candidate.status || 'Mapped'}</span>
+            <span className="soft-chip">Owner: {candidate.owner_email || 'Unassigned'}</span>
+            <span className={`relationship-chip ${relationshipTone(candidate)}`}>Relationship {candidate.relationship_score ?? 0}/10</span>
+          </div>
+        </div>
+        <div className="candidate-workspace-actions">
+          {candidate.linkedin_url && <a className="btn secondary" href={candidate.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={13}/></a>}
+          <Link className="btn secondary" href={`/candidates/${candidate.id}`}>Full profile</Link>
+          <button className="btn" onClick={() => startEdit(candidate)}><Pencil size={14}/> Edit</button>
+        </div>
+      </div>
+
+      <div className="candidate-workspace-tabs" role="tablist">
+        {(['overview','intelligence','timeline'] as const).map(tab => <button key={tab} className={candidateWorkspaceTab === tab ? 'active' : ''} onClick={() => setCandidateWorkspaceTab(tab)}>{tab === 'overview' ? 'Overview' : tab === 'intelligence' ? 'Intelligence' : 'Timeline'}</button>)}
+      </div>
+
+      {candidateWorkspaceTab === 'overview' && <div className="candidate-workspace-grid">
+        <div className="candidate-info-card">
+          <span className="muted">Profile completeness</span>
+          <div className="completion-ring"><strong>{completeness}%</strong><span>complete</span></div>
+          <div className="progress-track"><span style={{ width: `${completeness}%` }} /></div>
+        </div>
+        <div className="candidate-info-card"><span className="muted">Function</span><strong>{candidate.function_area || 'Unassigned'}</strong><p>{candidate.seniority || 'No seniority set'}</p></div>
+        <div className="candidate-info-card"><span className="muted">Location</span><strong>{candidate.location || 'Not added'}</strong><p>{candidate.company_name || 'No company linked'}</p></div>
+        <div className="candidate-info-card followup-card"><span className="muted">Follow-up</span><strong>{candidate.next_follow_up_date || 'No follow-up set'}</strong><p>Last interaction: {candidate.last_interaction_date || 'None recorded'}</p></div>
+        <div className="candidate-info-card wide"><span className="muted">Relationship notes</span><p>{candidate.relationship_notes || candidate.notes || 'No relationship notes yet.'}</p></div>
+        <div className="candidate-info-card wide"><span className="muted">CV summary</span><p>{candidate.cv_summary || 'No CV summary yet. Upload and parse a CV from the full profile or candidate intake modal.'}</p></div>
+      </div>}
+
+      {candidateWorkspaceTab === 'intelligence' && <div className="candidate-workspace-grid">
+        <div className="candidate-info-card wide"><span className="muted">Skills</span><div className="tag-cloud">{skills.length ? skills.map((skill: string) => <span key={skill}>{skill}</span>) : <em>No skills added</em>}</div></div>
+        <div className="candidate-info-card wide"><span className="muted">Tags</span><div className="tag-cloud accent">{tags.length ? tags.map((tag: string) => <span key={tag}>{tag}</span>) : <em>No tags added</em>}</div></div>
+        <div className="candidate-info-card"><span className="muted">Languages</span><strong>{languages.length ? languages.join(', ') : 'Not added'}</strong></div>
+        <div className="candidate-info-card"><span className="muted">Previous company</span><strong>{candidate.previous_company || 'Not added'}</strong></div>
+        <div className="candidate-info-card wide"><span className="muted">Applications</span><p>Use the full candidate profile to manage previous applications and career history in detail.</p><Link className="table-link" href={`/candidates/${candidate.id}`}>Open detailed applications →</Link></div>
+      </div>}
+
+      {candidateWorkspaceTab === 'timeline' && <div className="timeline-preview">
+        <div className="timeline-row"><span/> <div><strong>Candidate selected</strong><p className="muted">Quick workspace view loaded from Supabase candidate data.</p></div></div>
+        {candidate.updated_at && <div className="timeline-row"><span/> <div><strong>Last updated</strong><p className="muted">{new Date(candidate.updated_at).toLocaleString()}</p></div></div>}
+        {candidate.next_follow_up_date && <div className="timeline-row"><span/> <div><strong>Next follow-up</strong><p className="muted">{candidate.next_follow_up_date}</p></div></div>}
+        <Link className="btn secondary" href={`/candidates/${candidate.id}`}>Open full timeline</Link>
+      </div>}
+    </section>;
+  }
+
   function candidateMiniCard(c: any) {
     return <div key={c.id} className="mini-record-card">
       <div>
@@ -448,25 +569,25 @@ export default function CandidateClient({ initial, companies, userEmail }: { ini
 
       <div className="pipeline candidate-pipeline" style={{ marginBottom: 16 }}>{statusCounts.map(({ status, count }) => <button key={status} className="pipeline-step pipeline-button" onClick={() => openDrilldown(`${status} candidates`, rows.filter(r => r.status === status))}><span>{status}</span><strong>{count}</strong></button>)}</div>
 
-      <div className="candidate-list-card card">
-        <div className="candidate-list-header"><strong>{filtered.length} candidate{filtered.length === 1 ? '' : 's'}</strong><span className="muted">Click a name to open the full candidate intelligence profile.</span></div>
-        <div className="candidate-card-list">
-          {filtered.length ? filtered.map(c => <div className="candidate-list-item" key={c.id}>
-            <div className="candidate-person-block">
-              <Link className="candidate-name-link" href={`/candidates/${c.id}`}>{c.full_name}</Link>
-              <div className="muted">{c.title || 'No title'} · {c.company_id ? <Link className="table-link" href={`/companies/${c.company_id}`}>{c.company_name}</Link> : 'No company'}</div>
-              <div className="candidate-meta-row"><span>{c.function_area || 'Unassigned'}</span><span>{c.seniority || 'No seniority'}</span><span>Owner: {c.owner_email || 'Unassigned'}</span></div>
-            </div>
-            <div className="candidate-status-block">
-              <select className="mini-select" value={c.status || 'Mapped'} onChange={e => updateStatus(c.id, e.target.value, c.full_name)}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select>
-              <div className="actions candidate-card-actions">
-                {c.linkedin_url ? <a className="btn secondary" href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={12}/></a> : null}
-                <button className="icon-btn small" onClick={() => startEdit(c)} title="Edit"><Pencil size={15}/></button>
-                <button className="icon-btn small danger" onClick={() => deleteCandidate(c)} title="Delete"><Trash2 size={15}/></button>
+      <div className="candidate-workspace-shell">
+        <aside className="candidate-workspace-list card">
+          <div className="candidate-list-header candidate-workspace-list-header">
+            <div><strong>{filtered.length} candidate{filtered.length === 1 ? '' : 's'}</strong><span className="muted">Use ↑ / ↓ to move through candidates.</span></div>
+          </div>
+          <div className="candidate-card-list candidate-workspace-scroll">
+            {filtered.length ? filtered.map(c => <button type="button" className={selectedCandidate?.id === c.id ? 'candidate-list-item candidate-list-item-active' : 'candidate-list-item'} key={c.id} onClick={() => setSelectedId(c.id)}>
+              <div className="candidate-person-block">
+                <span className="candidate-name-link">{c.full_name}</span>
+                <div className="muted">{c.title || 'No title'} · {c.company_name || 'No company'}</div>
+                <div className="candidate-meta-row"><span>{c.function_area || 'Unassigned'}</span><span>{c.status || 'Mapped'}</span></div>
               </div>
-            </div>
-          </div>) : <div className="empty-state"><Users size={26}/><p>No candidates match this view yet.</p></div>}
-        </div>
+              <div className="candidate-status-block compact">
+                <select className="mini-select" value={c.status || 'Mapped'} onClick={e => e.stopPropagation()} onChange={e => updateStatus(c.id, e.target.value, c.full_name)}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select>
+              </div>
+            </button>) : <div className="empty-state"><Users size={26}/><p>No candidates match this view yet.</p></div>}
+          </div>
+        </aside>
+        {candidateDetailWorkspace(selectedCandidate)}
       </div>
     </div>
 
