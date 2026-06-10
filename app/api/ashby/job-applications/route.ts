@@ -59,7 +59,7 @@ async function listApplications(bodyBase: Record<string, any>, mode: FetchMode, 
     }
 
     const normalized = normalizeAshbyApplications(result.data);
-    const filtered = mode === 'localFilter' ? normalized.filter(app => applicationBelongsToJob(app, jobId)) : normalized;
+    const filtered = mode === 'localFilter' ? normalized.filter((app: any) => applicationBelongsToJob(app, jobId)) : normalized;
     for (const app of filtered) if (app.id) applicationsById.set(app.id, app);
 
     const pagination = ashbyPagination(result.data);
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
     if (app.ashby_candidate_id) candidateMap.set(app.ashby_candidate_id, candidateRowFromApplication(app));
   }
 
-  const candidateRows = Array.from(candidateMap.values()).filter(candidate => candidate.id);
+  const candidateRows = Array.from(candidateMap.values()).filter((candidate: any) => candidate.id);
   if (candidateRows.length) {
     const { error } = await supabase.from('ashby_candidates').upsert(candidateRows, { onConflict: 'id' });
     if (error) return NextResponse.json({ success: false, error: error.message, diagnostics }, { status: 200 });
