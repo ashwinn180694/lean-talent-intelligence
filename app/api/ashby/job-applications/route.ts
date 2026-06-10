@@ -4,18 +4,17 @@ import { requireLeanUser } from '@/lib/api-auth';
 import { getSupabaseForRequest } from '@/lib/supabase-route';
 
 export const dynamic = 'force-dynamic';
-
-const MAX_JOBS_PER_SYNC = 100;
-const MAX_PAGES_PER_JOB_STATUS = 25;
+const MAX_PAGES = 25;
 
 function candidateRowFromApplication(app: any) {
   const rawCandidate = app.raw?.candidate || app.raw?.candidateSnapshot || {};
+  const linkedIn = rawCandidate.linkedInUrl || rawCandidate.linkedinUrl || rawCandidate.socialLinks?.find?.((link: any) => /linkedin/i.test(link?.url || link?.type || ''))?.url || null;
   return {
     id: app.ashby_candidate_id,
     full_name: app.candidate_name || rawCandidate.name || rawCandidate.fullName || 'Unknown candidate',
     email: rawCandidate.primaryEmailAddress?.value || rawCandidate.email || null,
     phone: rawCandidate.primaryPhoneNumber?.value || rawCandidate.phone || null,
-    linkedin_url: rawCandidate.linkedInUrl || rawCandidate.linkedinUrl || rawCandidate.socialLinks?.find?.((link: any) => /linkedin/i.test(link?.url || link?.type || ''))?.url || null,
+    linkedin_url: linkedIn,
     current_company: rawCandidate.currentCompany || rawCandidate.currentCompanyName || rawCandidate.latestExperience?.companyName || null,
     current_title: rawCandidate.currentTitle || rawCandidate.title || rawCandidate.latestExperience?.title || null,
     location: rawCandidate.location?.name || rawCandidate.location || rawCandidate.currentLocation || null,
@@ -32,8 +31,8 @@ function localCandidateFromApplication(app: any) {
     title: candidate.current_title || null,
     location: candidate.location || null,
     linkedin_url: candidate.linkedin_url || null,
-    status: app.status || 'Ashby Sync',
-    notes: app.job_title ? `Imported from Ashby application for ${app.job_title}.` : 'Imported from Ashby live application.',
+    status: app.stage || app.status || 'Ashby Sync',
+    notes: app.job_title ? `Imported from Ashby application for ${app.job_title}.` : 'Imported from Ashby application.',
     ashby_candidate_id: app.ashby_candidate_id,
     ashby_last_synced_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -41,11 +40,11 @@ function localCandidateFromApplication(app: any) {
 }
 
 async function fetchApplicationsForJob(jobId: string) {
-  const allApplications: any[] = [];
+  const applicationsById = new Map<string, any>();
   const errors: string[] = [];
   let cursor: string | undefined;
 
-  for (let page = 0; page < MAX_PAGES_PER_JOB_STATUS; page += 1) {
+  for (let page = 0; page < MAX_PAGES; page += 1) {
     const body: Record<string, any> = {
       limit: 100,
       jobId,
@@ -60,53 +59,31 @@ async function fetchApplicationsForJob(jobId: string) {
     }
 
     const apps = normalizeAshbyApplications(result.data);
-    allApplications.push(...apps);
+    for (const app of apps) if (app.id) applicationsById.set(app.id, app);
 
     const more = Boolean((result.data as any)?.moreDataAvailable);
     cursor = (result.data as any)?.nextCursor;
     if (!more || !cursor) break;
   }
 
-  return { applications: allApplications, errors };
+  return { applications: Array.from(applicationsById.values()), errors };
 }
 
 export async function POST(request: Request) {
   const user = await requireLeanUser(request);
   if (!user.ok) return NextResponse.json({ success: false, error: user.error }, { status: user.status });
 
+  let payload: any = {};
+  try { payload = await request.json(); } catch {}
+  const jobId = String(payload.jobId || '').trim();
+  if (!jobId) return NextResponse.json({ success: false, error: 'Missing Ashby job ID.' }, { status: 400 });
+
   const supabase = getSupabaseForRequest(request);
   const startedAt = new Date().toISOString();
+  const { data: job } = await supabase.from('ashby_jobs').select('*').eq('id', jobId).maybeSingle();
 
-  const { data: storedJobs, error: jobsError } = await supabase
-    .from('ashby_jobs')
-    .select('id, title, status, is_archived')
-    .eq('is_archived', false)
-    .order('title')
-    .limit(MAX_JOBS_PER_SYNC);
+  const { applications, errors } = await fetchApplicationsForJob(jobId);
 
-  if (jobsError) {
-    await supabase.from('ashby_sync_runs').insert({ sync_type: 'job_scoped_applications', status: 'failed', records_synced: 0, error_message: jobsError.message, actor_email: user.email, started_at: startedAt, finished_at: new Date().toISOString() });
-    return NextResponse.json({ success: false, error: jobsError.message }, { status: 200 });
-  }
-
-  const jobs = (storedJobs || []).filter((job: any) => !/archived|closed/i.test(String(job.status || '')));
-  if (!jobs.length) {
-    return NextResponse.json({ success: false, error: 'No synced live Ashby jobs found. Click Sync jobs first, then sync candidates/applications.' }, { status: 200 });
-  }
-
-  const applicationsById = new Map<string, any>();
-  const syncErrors: string[] = [];
-
-  for (const job of jobs) {
-    const { applications, errors } = await fetchApplicationsForJob(job.id);
-    errors.forEach(error => syncErrors.push(`${job.title || job.id}: ${error}`));
-    for (const app of applications) {
-      if (!app.id) continue;
-      applicationsById.set(app.id, app);
-    }
-  }
-
-  const applications = Array.from(applicationsById.values());
   const candidateMap = new Map<string, any>();
   for (const app of applications) {
     if (app.ashby_candidate_id) candidateMap.set(app.ashby_candidate_id, candidateRowFromApplication(app));
@@ -135,8 +112,8 @@ export async function POST(request: Request) {
     id: app.id,
     ashby_candidate_id: app.ashby_candidate_id || null,
     local_candidate_id: app.ashby_candidate_id ? existingByAshby.get(app.ashby_candidate_id) || null : null,
-    ashby_job_id: app.ashby_job_id || null,
-    job_title: app.job_title || null,
+    ashby_job_id: app.ashby_job_id || jobId,
+    job_title: app.job_title || job?.title || null,
     candidate_name: app.candidate_name || null,
     status: app.status || null,
     stage: app.stage || null,
@@ -153,23 +130,23 @@ export async function POST(request: Request) {
   }
 
   await supabase.from('ashby_sync_runs').insert({
-    sync_type: 'job_scoped_applications',
-    status: syncErrors.length ? 'partial_success' : 'success',
+    sync_type: 'single_job_applications',
+    status: errors.length ? 'partial_success' : 'success',
     records_synced: candidateRows.length + appRows.length,
-    error_message: syncErrors.length ? syncErrors.slice(0, 5).join(' | ') : null,
+    error_message: errors.length ? errors.slice(0, 5).join(' | ') : null,
     actor_email: user.email,
     started_at: startedAt,
     finished_at: new Date().toISOString(),
-    raw_response: { jobs_scanned: jobs.length, candidates: candidateRows.length, applications: appRows.length, localCreated, errors: syncErrors.slice(0, 10) }
+    raw_response: { jobId, jobTitle: job?.title, candidates: candidateRows.length, applications: appRows.length, localCreated, errors: errors.slice(0, 10) }
   });
 
   return NextResponse.json({
     success: true,
-    scopedToJobs: true,
-    jobsScanned: jobs.length,
+    jobId,
+    jobTitle: job?.title || null,
     candidateCount: candidateRows.length,
     applicationCount: appRows.length,
     localCandidatesCreated: localCreated,
-    warnings: syncErrors.slice(0, 5)
+    warnings: errors.slice(0, 5)
   });
 }

@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import AppShellStatic from '@/components/AppShellStatic';
 import { supabase } from '@/lib/supabase-browser';
-import { Briefcase, RefreshCw, Users, GitBranch, Clock, CheckCircle2, AlertCircle, Search } from 'lucide-react';
+import { Briefcase, RefreshCw, Users, GitBranch, Clock, CheckCircle2, AlertCircle, Search, ArrowRight } from 'lucide-react';
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
@@ -119,10 +120,10 @@ export default function AshbyWorkspacePage() {
       <section className="card ashby-panel">
         <div className="section-header"><div><h2>Jobs</h2><p className="muted">Stored in Supabase after syncing from Ashby.</p></div><span className="pill">{filteredJobs.length}</span></div>
         <div className="ashby-list">
-          {loading ? <p className="muted">Loading...</p> : filteredJobs.length ? filteredJobs.map(job => <div className="ashby-list-item" key={job.id}>
+          {loading ? <p className="muted">Loading...</p> : filteredJobs.length ? filteredJobs.map(job => <Link className="ashby-list-item ashby-job-link" href={`/ashby/jobs/${encodeURIComponent(job.id)}`} key={job.id}>
             <div><strong>{job.title}</strong><p className="muted">{[job.department, job.location, job.status].filter(Boolean).join(' · ') || 'No metadata'}</p></div>
-            <span className="status-chip">{job.status || 'Unknown'}</span>
-          </div>) : <div className="empty-state"><Briefcase size={24}/><p>No jobs stored yet. Click Sync jobs.</p></div>}
+            <span className="status-chip">{job.status || 'Unknown'} <ArrowRight size={12}/></span>
+          </Link>) : <div className="empty-state"><Briefcase size={24}/><p>No jobs stored yet. Click Sync jobs.</p></div>}
         </div>
       </section>
 
