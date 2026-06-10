@@ -421,21 +421,30 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
         <button className="workspace-stat" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}><span>Visible</span><strong>{rows.length}</strong></button>
       </div>
 
-      <div className="workspace-filter-panel card">
-        <input className="input workspace-search" placeholder="Search company, country, category..." value={q} onChange={e => setQ(e.target.value)} />
-        <select className="select" value={category} onChange={e => setCategory(e.target.value)}><option value="All">All categories</option>{ALLOWED_COMPANY_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select>
-        <select className="select" value={region} onChange={e => setRegion(e.target.value)}><option value="All">All geography</option>{regions.map(r => <option key={r} value={r}>{r}</option>)}</select>
-        <select className="select" value={tier} onChange={e => setTier(e.target.value)}><option>All</option><option>Tier 1</option><option>Tier 2</option><option>Tier 3</option></select>
-        <button className="btn secondary" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}>Reset</button>
-      </div>
-
-      <div className="category-chip-row">
-        {ALLOWED_COMPANY_CATEGORIES.map(name => {
-          const count = categoryCounts.find(([cat]) => cat === name)?.[1] || 0;
-          return <button key={name} className={`category-chip-v9 ${categoryClass(name)} ${category === name ? 'active' : ''}`} onClick={() => setCategory(name)}>
-            <span>{name}</span><strong>{count}</strong>
-          </button>;
-        })}
+      <div className="workspace-filter-panel card refined-filter-panel">
+        <label className="filter-control filter-search-control">
+          <span>Search</span>
+          <input className="input workspace-search" placeholder="Search company, country, category..." value={q} onChange={e => setQ(e.target.value)} />
+        </label>
+        <label className="filter-control">
+          <span>Category</span>
+          <select className={`select category-select ${category !== 'All' ? categoryClass(category) : ''}`} value={category} onChange={e => setCategory(e.target.value)}>
+            <option value="All">All categories ({allCompanies.length})</option>
+            {ALLOWED_COMPANY_CATEGORIES.map(c => {
+              const count = categoryCounts.find(([cat]) => cat === c)?.[1] || 0;
+              return <option key={c} value={c}>{c} ({count})</option>;
+            })}
+          </select>
+        </label>
+        <label className="filter-control">
+          <span>Geography</span>
+          <select className="select" value={region} onChange={e => setRegion(e.target.value)}><option value="All">All geography</option>{regions.map(r => <option key={r} value={r}>{r}</option>)}</select>
+        </label>
+        <label className="filter-control">
+          <span>Priority</span>
+          <select className="select" value={tier} onChange={e => setTier(e.target.value)}><option>All</option><option>Tier 1</option><option>Tier 2</option><option>Tier 3</option></select>
+        </label>
+        <button className="btn secondary filter-reset-btn" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}>Reset</button>
       </div>
 
       <div className="company-master-detail card">
