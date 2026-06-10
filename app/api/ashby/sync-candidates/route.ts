@@ -1,21 +1,23 @@
 import { NextResponse } from 'next/server';
-import { ashbyPost, normalizeAshbyApplications } from '@/lib/ashby';
+import { applicationBelongsToJob, ashbyPagination, ashbyPost, normalizeAshbyApplications } from '@/lib/ashby';
 import { requireLeanUser } from '@/lib/api-auth';
 import { getSupabaseForRequest } from '@/lib/supabase-route';
 
 export const dynamic = 'force-dynamic';
 
 const MAX_JOBS_PER_SYNC = 100;
-const MAX_PAGES_PER_JOB_STATUS = 25;
+const MAX_PAGES = 30;
+
+type FetchMode = 'jobId' | 'jobIds' | 'localFilter';
 
 function candidateRowFromApplication(app: any) {
-  const rawCandidate = app.raw?.candidate || app.raw?.candidateSnapshot || {};
+  const rawCandidate = app.raw?.candidate || app.raw?.candidateSnapshot || app.raw?.candidateInfo || {};
   return {
     id: app.ashby_candidate_id,
-    full_name: app.candidate_name || rawCandidate.name || rawCandidate.fullName || 'Unknown candidate',
-    email: rawCandidate.primaryEmailAddress?.value || rawCandidate.email || null,
-    phone: rawCandidate.primaryPhoneNumber?.value || rawCandidate.phone || null,
-    linkedin_url: rawCandidate.linkedInUrl || rawCandidate.linkedinUrl || rawCandidate.socialLinks?.find?.((link: any) => /linkedin/i.test(link?.url || link?.type || ''))?.url || null,
+    full_name: app.candidate_name || rawCandidate.name || rawCandidate.fullName || rawCandidate.displayName || 'Unknown candidate',
+    email: rawCandidate.primaryEmailAddress?.value || rawCandidate.email || rawCandidate.emailAddress || null,
+    phone: rawCandidate.primaryPhoneNumber?.value || rawCandidate.phone || rawCandidate.phoneNumber || null,
+    linkedin_url: rawCandidate.linkedInUrl || rawCandidate.linkedinUrl || rawCandidate.linkedin || rawCandidate.socialLinks?.find?.((link: any) => /linkedin/i.test(String(link?.url || link?.type || '')))?.url || null,
     current_company: rawCandidate.currentCompany || rawCandidate.currentCompanyName || rawCandidate.latestExperience?.companyName || null,
     current_title: rawCandidate.currentTitle || rawCandidate.title || rawCandidate.latestExperience?.title || null,
     location: rawCandidate.location?.name || rawCandidate.location || rawCandidate.currentLocation || null,
@@ -32,7 +34,7 @@ function localCandidateFromApplication(app: any) {
     title: candidate.current_title || null,
     location: candidate.location || null,
     linkedin_url: candidate.linkedin_url || null,
-    status: app.status || 'Ashby Sync',
+    status: app.stage || app.status || 'Ashby Sync',
     notes: app.job_title ? `Imported from Ashby application for ${app.job_title}.` : 'Imported from Ashby live application.',
     ashby_candidate_id: app.ashby_candidate_id,
     ashby_last_synced_at: new Date().toISOString(),
@@ -40,34 +42,54 @@ function localCandidateFromApplication(app: any) {
   };
 }
 
-async function fetchApplicationsForJob(jobId: string) {
-  const allApplications: any[] = [];
+async function listApplications(bodyBase: Record<string, any>, mode: FetchMode, jobId: string) {
+  const applicationsById = new Map<string, any>();
+  const diagnostics: any[] = [];
   const errors: string[] = [];
   let cursor: string | undefined;
 
-  for (let page = 0; page < MAX_PAGES_PER_JOB_STATUS; page += 1) {
-    const body: Record<string, any> = {
-      limit: 100,
-      jobId,
-      expand: ['candidate', 'job', 'currentInterviewStage', 'source']
-    };
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const body: Record<string, any> = { limit: 100, ...bodyBase };
     if (cursor) body.cursor = cursor;
 
     const result = await ashbyPost('application.list', body);
     if (!result.ok) {
-      errors.push(result.error || `application.list failed for job ${jobId}`);
+      errors.push(`${mode}: ${result.error || 'application.list failed'}`);
+      diagnostics.push({ mode, page: page + 1, ok: false, error: result.error, status: result.status, responseShape: result.data ? Object.keys(result.data as any) : [] });
       break;
     }
 
-    const apps = normalizeAshbyApplications(result.data);
-    allApplications.push(...apps);
+    const normalized = normalizeAshbyApplications(result.data);
+    const filtered = mode === 'localFilter' ? normalized.filter(app => applicationBelongsToJob(app, jobId)) : normalized;
+    for (const app of filtered) if (app.id) applicationsById.set(app.id, app);
 
-    const more = Boolean((result.data as any)?.moreDataAvailable);
-    cursor = (result.data as any)?.nextCursor;
-    if (!more || !cursor) break;
+    const pagination = ashbyPagination(result.data);
+    diagnostics.push({ mode, page: page + 1, ok: true, totalReturned: normalized.length, matchedThisJob: filtered.length, moreDataAvailable: pagination.more, hasCursor: Boolean(pagination.cursor), sampleJobIds: normalized.slice(0, 5).map(app => app.ashby_job_id).filter(Boolean) });
+
+    cursor = pagination.cursor || undefined;
+    if (!pagination.more || !cursor) break;
   }
 
-  return { applications: allApplications, errors };
+  return { applications: Array.from(applicationsById.values()), errors, diagnostics };
+}
+
+async function fetchApplicationsForJob(jobId: string) {
+  const expand = ['candidate', 'job', 'currentInterviewStage', 'source'];
+  const attempts = [
+    { mode: 'jobId' as FetchMode, body: { jobId, expand } },
+    { mode: 'jobIds' as FetchMode, body: { jobIds: [jobId], expand } },
+    { mode: 'localFilter' as FetchMode, body: { expand } }
+  ];
+  const allDiagnostics: any[] = [];
+  const allErrors: string[] = [];
+
+  for (const attempt of attempts) {
+    const result = await listApplications(attempt.body, attempt.mode, jobId);
+    allDiagnostics.push(...result.diagnostics);
+    allErrors.push(...result.errors);
+    if (result.applications.length > 0) return { applications: result.applications, errors: allErrors, diagnostics: allDiagnostics, usedMode: attempt.mode };
+  }
+  return { applications: [], errors: allErrors, diagnostics: allDiagnostics, usedMode: 'none' };
 }
 
 export async function POST(request: Request) {
@@ -90,32 +112,27 @@ export async function POST(request: Request) {
   }
 
   const jobs = (storedJobs || []).filter((job: any) => !/archived|closed/i.test(String(job.status || '')));
-  if (!jobs.length) {
-    return NextResponse.json({ success: false, error: 'No synced live Ashby jobs found. Click Sync jobs first, then sync candidates/applications.' }, { status: 200 });
-  }
+  if (!jobs.length) return NextResponse.json({ success: false, error: 'No synced live Ashby jobs found. Click Sync jobs first, then sync candidates/applications.' }, { status: 200 });
 
   const applicationsById = new Map<string, any>();
+  const diagnosticsByJob: any[] = [];
   const syncErrors: string[] = [];
 
   for (const job of jobs) {
-    const { applications, errors } = await fetchApplicationsForJob(job.id);
-    errors.forEach(error => syncErrors.push(`${job.title || job.id}: ${error}`));
-    for (const app of applications) {
-      if (!app.id) continue;
-      applicationsById.set(app.id, app);
-    }
+    const result = await fetchApplicationsForJob(job.id);
+    result.errors.forEach(error => syncErrors.push(`${job.title || job.id}: ${error}`));
+    diagnosticsByJob.push({ jobId: job.id, jobTitle: job.title, usedMode: result.usedMode, applications: result.applications.length, diagnostics: result.diagnostics.slice(0, 12) });
+    for (const app of result.applications) if (app.id) applicationsById.set(app.id, app);
   }
 
   const applications = Array.from(applicationsById.values());
   const candidateMap = new Map<string, any>();
-  for (const app of applications) {
-    if (app.ashby_candidate_id) candidateMap.set(app.ashby_candidate_id, candidateRowFromApplication(app));
-  }
+  for (const app of applications) if (app.ashby_candidate_id) candidateMap.set(app.ashby_candidate_id, candidateRowFromApplication(app));
 
   const candidateRows = Array.from(candidateMap.values()).filter(candidate => candidate.id);
   if (candidateRows.length) {
     const { error } = await supabase.from('ashby_candidates').upsert(candidateRows, { onConflict: 'id' });
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 200 });
+    if (error) return NextResponse.json({ success: false, error: error.message, diagnosticsByJob }, { status: 200 });
   }
 
   const { data: existingLocal } = await supabase.from('candidates').select('id, ashby_candidate_id');
@@ -149,7 +166,7 @@ export async function POST(request: Request) {
 
   if (appRows.length) {
     const { error } = await supabase.from('ashby_applications').upsert(appRows, { onConflict: 'id' });
-    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 200 });
+    if (error) return NextResponse.json({ success: false, error: error.message, diagnosticsByJob }, { status: 200 });
   }
 
   await supabase.from('ashby_sync_runs').insert({
@@ -160,7 +177,7 @@ export async function POST(request: Request) {
     actor_email: user.email,
     started_at: startedAt,
     finished_at: new Date().toISOString(),
-    raw_response: { jobs_scanned: jobs.length, candidates: candidateRows.length, applications: appRows.length, localCreated, errors: syncErrors.slice(0, 10) }
+    raw_response: { jobs_scanned: jobs.length, candidates: candidateRows.length, applications: appRows.length, localCreated, diagnosticsByJob: diagnosticsByJob.slice(0, 20), errors: syncErrors.slice(0, 10) }
   });
 
   return NextResponse.json({
@@ -170,6 +187,7 @@ export async function POST(request: Request) {
     candidateCount: candidateRows.length,
     applicationCount: appRows.length,
     localCandidatesCreated: localCreated,
+    diagnosticsByJob: diagnosticsByJob.slice(0, 20),
     warnings: syncErrors.slice(0, 5)
   });
 }

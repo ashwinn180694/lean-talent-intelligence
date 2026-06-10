@@ -29,6 +29,8 @@ export default function AshbyJobDetailPage({ params }: { params: { id: string } 
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [diagnostics, setDiagnostics] = useState<any[]>([]);
+  const [usedMode, setUsedMode] = useState<string>('');
 
   async function loadJob() {
     setLoading(true);
@@ -76,10 +78,14 @@ export default function AshbyJobDetailPage({ params }: { params: { id: string } 
     });
     const json = await res.json();
     if (json.success) {
-      setMessage(`Synced ${json.applicationCount || 0} applications and ${json.candidateCount || 0} candidates for this job.`);
+      setMessage(`Synced ${json.applicationCount || 0} applications and ${json.candidateCount || 0} candidates for this job${json.usedMode ? ` using ${json.usedMode}` : ''}.`);
+      setDiagnostics(json.diagnostics || []);
+      setUsedMode(json.usedMode || '');
       await loadJob();
     } else {
       setError(json.error || 'Unable to sync this Ashby job.');
+      setDiagnostics(json.diagnostics || []);
+      setUsedMode(json.usedMode || '');
     }
     setSyncing(false);
   }
@@ -112,6 +118,17 @@ export default function AshbyJobDetailPage({ params }: { params: { id: string } 
       <div className="card ashby-search-card">
         <div className="search-row"><Search size={16}/><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search candidates in this job by name, stage, email, company, title..." /></div>
       </div>
+
+
+      {diagnostics.length > 0 && <section className="card ashby-panel">
+        <div className="section-header"><div><h2>Sync diagnostics</h2><p className="muted">Use this if a job has candidates in Ashby but none appear here. It shows which application.list strategy worked.</p></div>{usedMode && <span className="pill">Mode: {usedMode}</span>}</div>
+        <div className="ashby-list compact">
+          {diagnostics.slice(0, 12).map((item: any, index: number) => <div className="ashby-list-item" key={`${item.mode}-${item.page}-${index}`}>
+            <div><strong>{item.mode} · page {item.page}</strong><p className="muted">Returned {item.totalReturned ?? 0}; matched this job {item.matchedThisJob ?? 0}; cursor {item.hasCursor ? 'yes' : 'no'}.</p>{item.error && <p className="muted">Error: {item.error}</p>}</div>
+            <span className={item.ok ? 'status-chip success-chip' : 'status-chip danger-chip'}>{item.ok ? 'OK' : 'Error'}</span>
+          </div>)}
+        </div>
+      </section>}
 
       <section className="card ashby-panel ashby-job-candidates-panel">
         <div className="section-header"><div><h2>Candidates in this Ashby job</h2><p className="muted">These candidates are synced from Ashby applications attached to this job.</p></div><span className="pill">{filteredApplications.length}</span></div>
