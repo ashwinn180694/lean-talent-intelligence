@@ -9,6 +9,7 @@ const nav = [
   { href: '/companies', label: 'Companies', icon: '◧' },
   { href: '/candidates', label: 'Candidates', icon: '◎' },
   { href: '/talent-pools', label: 'Talent Pools', icon: '◇' },
+  { href: '/ashby', label: 'Ashby', icon: '▣' },
   { href: '/settings', label: 'Settings', icon: '⚙' }
 ];
 
