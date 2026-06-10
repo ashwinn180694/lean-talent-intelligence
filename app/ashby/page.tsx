@@ -80,10 +80,10 @@ export default function AshbyWorkspacePage() {
     const res = await fetch('/api/ashby/sync-candidates', { method: 'POST', headers });
     const json = await res.json();
     if (json.success) {
-      setMessage(`Synced ${json.candidateCount || 0} Ashby candidates and ${json.applicationCount || 0} applications. Created ${json.localCandidatesCreated || 0} local candidate records.`);
+      setMessage(`Scanned ${json.jobsScanned || 0} live jobs. Synced ${json.candidateCount || 0} job-linked candidates and ${json.applicationCount || 0} applications. Created ${json.localCandidatesCreated || 0} local candidate records.`);
       await loadLocalData();
     } else {
-      setError(json.error || 'Unable to sync Ashby candidates/applications.');
+      setError(json.error || 'Unable to sync Ashby live-job candidates/applications.');
     }
     setSyncing(null);
   }
@@ -97,7 +97,7 @@ export default function AshbyWorkspacePage() {
       </div>
       <div className="modal-actions">
         <button className="btn secondary" disabled={syncing !== null} onClick={syncJobs}><RefreshCw size={14}/> {syncing === 'jobs' ? 'Syncing jobs...' : 'Sync jobs'}</button>
-        <button className="btn" disabled={syncing !== null} onClick={syncCandidates}><Users size={14}/> {syncing === 'candidates' ? 'Syncing candidates...' : 'Sync candidates & applications'}</button>
+        <button className="btn" disabled={syncing !== null} onClick={syncCandidates}><Users size={14}/> {syncing === 'candidates' ? 'Syncing live-job applications...' : 'Sync live-job candidates'}</button>
       </div>
     </div>
 
@@ -127,12 +127,12 @@ export default function AshbyWorkspacePage() {
       </section>
 
       <section className="card ashby-panel">
-        <div className="section-header"><div><h2>Live candidates & applications</h2><p className="muted">Candidates and applications pulled from Ashby live jobs.</p></div><span className="pill">{filteredApplications.length}</span></div>
+        <div className="section-header"><div><h2>Live candidates & applications</h2><p className="muted">Only candidates attached to synced live Ashby jobs are shown here. Broad candidate database sync is intentionally disabled.</p></div><span className="pill">{filteredApplications.length}</span></div>
         <div className="ashby-list">
           {loading ? <p className="muted">Loading...</p> : filteredApplications.length ? filteredApplications.map(app => <div className="ashby-list-item" key={app.id}>
             <div><strong>{app.candidate_name || 'Candidate'}</strong><p className="muted">{[app.job_title, app.stage, app.status].filter(Boolean).join(' · ') || 'Application synced from Ashby'}</p></div>
             <span className="status-chip">{app.stage || app.status || 'Synced'}</span>
-          </div>) : <div className="empty-state"><Users size={24}/><p>No Ashby applications stored yet. Click Sync candidates & applications.</p></div>}
+          </div>) : <div className="empty-state"><Users size={24}/><p>No job-linked Ashby applications stored yet. Click Sync live-job candidates after syncing jobs.</p></div>}
         </div>
       </section>
     </div>
