@@ -150,6 +150,10 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [ashbyJobs, setAshbyJobs] = useState<any[]>([]);
+  const [ashbyJobId, setAshbyJobId] = useState('');
+  const [ashbyLoading, setAshbyLoading] = useState(false);
+  const [ashbyMessage, setAshbyMessage] = useState('');
 
   const skills = useMemo(() => toArray(candidate?.skills), [candidate]);
   const tags = useMemo(() => toArray(candidate?.tags), [candidate]);
@@ -254,6 +258,81 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
     setShowRelationshipModal(false);
     setMessage('Relationship details updated.');
     logActivity('updated candidate relationship details', next.full_name);
+  }
+
+
+  async function getAuthHeaders() {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async function loadAshbyJobs() {
+    setAshbyLoading(true); setError(''); setAshbyMessage('');
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/ashby/jobs', { headers });
+    const json = await res.json();
+    if (json.success) {
+      setAshbyJobs(json.jobs || []);
+      setAshbyMessage(`Loaded ${(json.jobs || []).length} open Ashby jobs.`);
+    } else {
+      setError(json.error || 'Unable to load Ashby jobs.');
+    }
+    setAshbyLoading(false);
+  }
+
+  async function pushCandidateToAshby() {
+    if (!candidate) return;
+    setAshbyLoading(true); setError(''); setAshbyMessage('');
+    const headers = { ...(await getAuthHeaders()), 'content-type': 'application/json' };
+    const res = await fetch('/api/ashby/push-candidate', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        candidate: {
+          id: candidate.id,
+          full_name: candidate.full_name,
+          linkedin_url: candidate.linkedin_url,
+          location: candidate.location,
+          notes: candidate.notes,
+          cv_summary: candidate.cv_summary,
+          ashby_candidate_id: candidate.ashby_candidate_id
+        },
+        jobId: ashbyJobId || null
+      })
+    });
+    const json = await res.json();
+    if (!json.success) {
+      setError(json.error || `Ashby push failed${json.step ? ` at ${json.step}` : ''}.`);
+      setAshbyLoading(false);
+      return;
+    }
+
+    const candidatePayload: any = { ashby_candidate_id: json.ashbyCandidateId, ashby_last_synced_at: new Date().toISOString() };
+    const { data, error } = await supabase.from('candidates').update(candidatePayload).eq('id', candidate.id).select('*').single();
+    if (error) { setError(error.message); setAshbyLoading(false); return; }
+
+    if (json.ashbyApplicationId && ashbyJobId) {
+      const job = ashbyJobs.find(j => j.id === ashbyJobId);
+      const appPayload = {
+        candidate_id: candidate.id,
+        role_title: job?.title || 'Ashby application',
+        status: 'Synced to Ashby',
+        source: 'Ashby',
+        ashby_application_id: json.ashbyApplicationId,
+        applied_at: new Date().toISOString().slice(0, 10),
+        notes: `Created from Lean Talent Intelligence. Ashby job: ${job?.title || ashbyJobId}`
+      };
+      await supabase.from('candidate_applications').insert(appPayload);
+    }
+
+    await addTimeline('Pushed to Ashby', json.ashbyApplicationId ? `Candidate synced and application created: ${json.ashbyApplicationId}` : `Candidate synced: ${json.ashbyCandidateId}`, 'ashby');
+    const company = companies.find(c => c.id === data.company_id);
+    setCandidate({ ...data, company_name: company?.name || candidate.company_name || null });
+    setForm(toForm({ ...data, company_name: company?.name || candidate.company_name || null }, userEmail));
+    setAshbyMessage(json.ashbyApplicationId ? 'Candidate pushed to Ashby and application created.' : 'Candidate pushed to Ashby.');
+    setAshbyLoading(false);
+    reloadCandidate();
   }
 
   async function deleteCandidate() {
@@ -512,6 +591,26 @@ export default function CandidateDetailClient({ candidateId }: { candidateId: st
       <h2>Status pipeline</h2>
       <div className="pipeline">{STATUSES.map(s => <button key={s} className={`pipeline-step pipeline-button ${candidate.status === s ? 'active' : ''}`} onClick={() => updateStatus(s)}><span>{s}</span><strong>{candidate.status === s ? '✓' : ''}</strong></button>)}</div>
     </div>
+
+    <details className="card intelligence-section" open>
+      <summary><RefreshCw size={18}/> Ashby</summary>
+      <div className="section-body">
+        <div className="company-detail-grid">
+          <div><div className="muted">Ashby candidate ID</div><strong>{candidate.ashby_candidate_id || 'Not synced yet'}</strong></div>
+          <div><div className="muted">Last synced</div><strong>{candidate.ashby_last_synced_at ? new Date(candidate.ashby_last_synced_at).toLocaleString() : '-'}</strong></div>
+          <div><div className="muted">Selected job</div><strong>{ashbyJobs.find(j => j.id === ashbyJobId)?.title || 'Optional'}</strong></div>
+        </div>
+        <p className="muted">Push this candidate to Ashby from the server-side integration. Choose a job if you also want to create an Ashby application.</p>
+        <div className="grid form-grid">
+          <label className="full-span">Ashby job<select className="select" value={ashbyJobId} onChange={e => setAshbyJobId(e.target.value)}><option value="">No job selected — create candidate only</option>{ashbyJobs.map(job => <option key={job.id} value={job.id}>{job.title}{job.department ? ` · ${job.department}` : ''}{job.location ? ` · ${job.location}` : ''}</option>)}</select></label>
+        </div>
+        {ashbyMessage && <div className="success">{ashbyMessage}</div>}
+        <div className="modal-actions">
+          <button className="btn secondary" disabled={ashbyLoading} onClick={loadAshbyJobs} type="button">{ashbyLoading ? 'Loading…' : 'Load Ashby jobs'}</button>
+          <button className="btn" disabled={ashbyLoading} onClick={pushCandidateToAshby} type="button">{ashbyLoading ? 'Syncing…' : candidate.ashby_candidate_id ? 'Update / create application in Ashby' : 'Push candidate to Ashby'}</button>
+        </div>
+      </div>
+    </details>
 
     <details className="card intelligence-section" open>
       <summary><Sparkles size={18}/> Intelligence Summary</summary>

@@ -26,6 +26,9 @@ export default function SettingsPage(){
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [ashbyStatus, setAshbyStatus] = useState<any>(null);
+  const [ashbyJobs, setAshbyJobs] = useState<any[]>([]);
+  const [ashbyLoading, setAshbyLoading] = useState(false);
 
   const displayName = useMemo(() => profile.display_name || email.split('@')[0]?.replace(/[._-]+/g, ' ') || 'Lean user', [profile.display_name, email]);
 
@@ -52,6 +55,38 @@ export default function SettingsPage(){
     }
     load();
   }, []);
+
+
+
+  async function getAuthHeaders() {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
+  async function testAshbyConnection() {
+    setAshbyLoading(true); setError(''); setMessage('');
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/ashby/status', { headers });
+    const json = await res.json();
+    setAshbyStatus(json);
+    setMessage(json.connected ? 'Ashby connection verified.' : 'Ashby connection check completed. Review the status below.');
+    setAshbyLoading(false);
+  }
+
+  async function loadAshbyJobs() {
+    setAshbyLoading(true); setError(''); setMessage('');
+    const headers = await getAuthHeaders();
+    const res = await fetch('/api/ashby/jobs', { headers });
+    const json = await res.json();
+    if (json.success) {
+      setAshbyJobs(json.jobs || []);
+      setMessage(`Loaded ${(json.jobs || []).length} open Ashby jobs.`);
+    } else {
+      setError(json.error || 'Unable to load Ashby jobs.');
+    }
+    setAshbyLoading(false);
+  }
 
   async function saveProfile() {
     setSaving(true); setMessage(''); setError('');
@@ -100,6 +135,29 @@ export default function SettingsPage(){
         <div className="modal-actions" style={{marginTop:16}}>
           <button className="btn secondary" onClick={async()=>{await supabase.auth.signOut(); window.location.href='/login';}}>Sign out</button>
           <button className="btn" disabled={saving} onClick={saveProfile}>{saving ? 'Saving…' : 'Save profile'}</button>
+        </div>
+      </section>
+
+      <section className="card profile-form-card ashby-settings-card">
+        <div className="modal-header" style={{padding: 0, borderBottom: 'none'}}>
+          <div>
+            <h2>Ashby integration</h2>
+            <p className="muted">Test the server-side Ashby API key and preview open jobs. The key is never exposed to the browser.</p>
+          </div>
+        </div>
+        <div className="grid grid-3" style={{marginTop: 14}}>
+          <div className="mini-stat"><strong>{ashbyStatus?.configured ? 'Configured' : 'Unknown'}</strong><span>API key</span></div>
+          <div className="mini-stat"><strong>{ashbyStatus?.connected ? 'Connected' : 'Not verified'}</strong><span>Status</span></div>
+          <div className="mini-stat"><strong>{ashbyJobs.length}</strong><span>Open jobs loaded</span></div>
+        </div>
+        {ashbyStatus?.error && <div className="error" style={{marginTop: 12}}>{ashbyStatus.error}</div>}
+        {ashbyStatus?.message && <div className="success" style={{marginTop: 12}}>{ashbyStatus.message}</div>}
+        <div className="modal-actions" style={{marginTop:16}}>
+          <button className="btn secondary" disabled={ashbyLoading} onClick={testAshbyConnection}>{ashbyLoading ? 'Checking…' : 'Test connection'}</button>
+          <button className="btn" disabled={ashbyLoading} onClick={loadAshbyJobs}>{ashbyLoading ? 'Loading…' : 'Load open jobs'}</button>
+        </div>
+        <div className="note-list" style={{marginTop: 16}}>
+          {ashbyJobs.length ? ashbyJobs.slice(0, 8).map(job => <div className="note-item" key={job.id}><strong>{job.title}</strong><p className="muted">{job.status || 'Open'}{job.department ? ` · ${job.department}` : ''}{job.location ? ` · ${job.location}` : ''}</p><span className="pill">{job.id}</span></div>) : <p className="muted">No jobs loaded yet. Click Load open jobs to confirm Jobs Read access.</p>}
         </div>
       </section>
     </div>
