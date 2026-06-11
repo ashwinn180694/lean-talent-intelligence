@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Plus, X, Trash2, ChevronUp, ChevronDown, Sparkles, CheckCircle2, Loader2, Save } from 'lucide-react';
+import { ExternalLink, Plus, X, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Loader2, Save } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 
@@ -134,6 +134,8 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
 
   useEffect(() => {
     setAllCompanies(companies);
@@ -381,6 +383,30 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
     window.setTimeout(() => setSaveState('idle'), 1600);
   }
 
+
+
+  function navigateCompany(delta: number) {
+    if (!rows.length) return;
+    const current = selectedIndex < 0 ? 0 : selectedIndex;
+    const nextIndex = Math.min(Math.max(current + delta, 0), rows.length - 1);
+    selectCompany(rows[nextIndex]);
+  }
+
+  function beginSwipe(x: number, y: number) {
+    swipeStartX.current = x;
+    swipeStartY.current = y;
+  }
+
+  function finishSwipe(x: number, y: number) {
+    if (swipeStartX.current === null || swipeStartY.current === null) return;
+    const dx = x - swipeStartX.current;
+    const dy = y - swipeStartY.current;
+    swipeStartX.current = null;
+    swipeStartY.current = null;
+    if (Math.abs(dx) < 58 || Math.abs(dx) < Math.abs(dy)) return;
+    navigateCompany(dx < 0 ? 1 : -1);
+  }
+
   const totalTier1 = allCompanies.filter(c => c.priority_tier === 'Tier 1').length;
 
   const similarCompanies = useMemo(() => {
@@ -462,7 +488,7 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
           </div>
         </div>
 
-        <div className="company-detail-pane">
+        <div className="company-detail-pane swipeable-company-deck" onTouchStart={(e: any) => beginSwipe(e.touches[0].clientX, e.touches[0].clientY)} onTouchEnd={(e: any) => finishSwipe(e.changedTouches[0].clientX, e.changedTouches[0].clientY)} onMouseDown={(e: any) => beginSwipe(e.clientX, e.clientY)} onMouseUp={(e: any) => finishSwipe(e.clientX, e.clientY)}>
           {draft ? <>
             <div className="detail-hero-card">
               <div className="detail-title-block">
@@ -473,6 +499,7 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
                 </div>
               </div>
               <div className="save-indicator">
+                <span className="deck-position-pill">{selectedIndex >= 0 ? selectedIndex + 1 : 0} / {rows.length}</span>
                 {saveState === 'saving' && <><Loader2 size={15} className="spin"/> {saveMessage || 'Saving to Supabase...'}</>}
                 {saveState === 'saved' && <><CheckCircle2 size={15}/> {saveMessage || 'Saved to Supabase'}</>}
                 {saveState === 'error' && <span className="save-error">{saveMessage}</span>}
@@ -481,6 +508,8 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
             </div>
 
             <div className="company-action-strip">
+              <button className="btn secondary deck-nav-btn" type="button" onClick={() => navigateCompany(-1)} disabled={selectedIndex <= 0}><ChevronLeft size={14}/> Previous</button>
+              <button className="btn secondary deck-nav-btn" type="button" onClick={() => navigateCompany(1)} disabled={selectedIndex < 0 || selectedIndex >= rows.length - 1}>Next <ChevronRight size={14}/></button>
               <a className="btn secondary" href={draft.website_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!draft.website_url} onClick={e => { if (!draft.website_url) e.preventDefault(); }}>Website <ExternalLink size={14}/></a>
               <a className="btn secondary" href={draft.linkedin_company_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!draft.linkedin_company_url} onClick={e => { if (!draft.linkedin_company_url) e.preventDefault(); }}>LinkedIn <ExternalLink size={14}/></a>
               <button className="btn secondary" type="button" onClick={() => draft && saveCompany(draft)} disabled={saveState === 'saving'}><Save size={14}/> Save now</button>
