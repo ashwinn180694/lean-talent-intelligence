@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Plus, X, Trash2, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Sparkles, CheckCircle2, Loader2, Save } from 'lucide-react';
+import { ExternalLink, Plus, X, Trash2, ChevronUp, ChevronDown, Sparkles, CheckCircle2, Loader2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 
@@ -134,8 +134,8 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const swipeStartX = useRef<number | null>(null);
-  const swipeStartY = useRef<number | null>(null);
+  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
+  const [dragStartX, setDragStartX] = useState<number | null>(null);
 
   useEffect(() => {
     setAllCompanies(companies);
@@ -188,18 +188,41 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
       if (!rows.length) return;
       if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
         event.preventDefault();
-        const next = selectedIndex < 0 ? 0 : Math.min(selectedIndex + 1, rows.length - 1);
-        selectCompany(rows[next]);
+        moveCompany('next');
       }
       if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
         event.preventDefault();
-        const prev = selectedIndex < 0 ? 0 : Math.max(selectedIndex - 1, 0);
-        selectCompany(rows[prev]);
+        moveCompany('prev');
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [rows, selectedIndex, showAdd, pendingDelete]);
+
+  function moveCompany(direction: 'next' | 'prev') {
+    if (!rows.length) return;
+    const current = selectedIndex < 0 ? 0 : selectedIndex;
+    const nextIndex = direction === 'next'
+      ? (current + 1) % rows.length
+      : (current - 1 + rows.length) % rows.length;
+    setSwipeDirection(direction === 'next' ? 'right' : 'left');
+    window.setTimeout(() => {
+      selectCompany(rows[nextIndex]);
+      setSwipeDirection(null);
+    }, 190);
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    setDragStartX(event.clientX);
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    if (dragStartX === null) return;
+    const delta = event.clientX - dragStartX;
+    setDragStartX(null);
+    if (Math.abs(delta) < 45) return;
+    moveCompany(delta > 0 ? 'prev' : 'next');
+  }
 
   function selectCompany(company: Company) {
     setSelectedId(company.id);
@@ -383,30 +406,6 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
     window.setTimeout(() => setSaveState('idle'), 1600);
   }
 
-
-
-  function navigateCompany(delta: number) {
-    if (!rows.length) return;
-    const current = selectedIndex < 0 ? 0 : selectedIndex;
-    const nextIndex = Math.min(Math.max(current + delta, 0), rows.length - 1);
-    selectCompany(rows[nextIndex]);
-  }
-
-  function beginSwipe(x: number, y: number) {
-    swipeStartX.current = x;
-    swipeStartY.current = y;
-  }
-
-  function finishSwipe(x: number, y: number) {
-    if (swipeStartX.current === null || swipeStartY.current === null) return;
-    const dx = x - swipeStartX.current;
-    const dy = y - swipeStartY.current;
-    swipeStartX.current = null;
-    swipeStartY.current = null;
-    if (Math.abs(dx) < 58 || Math.abs(dx) < Math.abs(dy)) return;
-    navigateCompany(dx < 0 ? 1 : -1);
-  }
-
   const totalTier1 = allCompanies.filter(c => c.priority_tier === 'Tier 1').length;
 
   const similarCompanies = useMemo(() => {
@@ -473,22 +472,57 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
         <button className="btn secondary filter-reset-btn" onClick={() => { setQ(''); setTier('All'); setRegion('All'); setCategory('All'); }}>Reset</button>
       </div>
 
-      <div className="company-master-detail card">
-        <div className="company-list-pane">
+      <div className="company-master-detail discovery-workspace card">
+        <div className="company-list-pane discovery-filter-pane">
           <div className="pane-header">
-            <div><strong>{rows.length}</strong><span> companies</span></div>
-            <div className="arrow-help"><ChevronUp size={14}/><ChevronDown size={14}/> arrow keys</div>
+            <div><strong>{rows.length}</strong><span> in queue</span></div>
+            <div className="arrow-help"><ChevronLeft size={14}/><ChevronRight size={14}/> loop</div>
           </div>
-          <div className="company-list-scroll" ref={listRef}>
-            {rows.map(c => <button key={c.id} data-company-id={c.id} className={`company-row-card ${selectedId === c.id ? 'active' : ''}`} onClick={() => selectCompany(c)}>
+          <div className="company-list-scroll compact-discovery-list" ref={listRef}>
+            {rows.map((c, idx) => <button key={c.id} data-company-id={c.id} className={`company-row-card ${selectedId === c.id ? 'active' : ''}`} onClick={() => selectCompany(c)}>
               <div className="row-title-line"><strong>{c.name}</strong><span className={`fit-dot ${fitTone(c.lean_fit_score)}`}>{c.lean_fit_score || '-'}</span></div>
-              <div className="row-meta-line"><span className={`category-mini ${categoryClass(c.sub_sector)}`}>{c.sub_sector || 'Global Fintech'}</span><span>{c.region || 'Global'}</span></div>
+              <div className="row-meta-line"><span className={`category-mini ${categoryClass(c.sub_sector)}`}>{c.sub_sector || 'Global Fintech'}</span><span>{idx + 1} of {rows.length}</span></div>
             </button>)}
             {rows.length === 0 && <div className="empty-state">No companies match this view.</div>}
           </div>
         </div>
 
-        <div className="company-detail-pane swipeable-company-deck" onTouchStart={(e: any) => beginSwipe(e.touches[0].clientX, e.touches[0].clientY)} onTouchEnd={(e: any) => finishSwipe(e.changedTouches[0].clientX, e.changedTouches[0].clientY)} onMouseDown={(e: any) => beginSwipe(e.clientX, e.clientY)} onMouseUp={(e: any) => finishSwipe(e.clientX, e.clientY)}>
+        <div className="company-swipe-pane">
+          <div className="swipe-pane-header">
+            <div>
+              <div className="section-kicker">Discovery deck</div>
+              <strong>{selectedIndex >= 0 ? selectedIndex + 1 : 0} of {rows.length}</strong>
+            </div>
+            <div className="swipe-controls">
+              <button className="icon-btn swipe-btn" type="button" onClick={() => moveCompany('prev')} aria-label="Previous company"><ChevronLeft size={20}/></button>
+              <button className="icon-btn swipe-btn" type="button" onClick={() => moveCompany('next')} aria-label="Next company"><ChevronRight size={20}/></button>
+            </div>
+          </div>
+          <div className={`company-card-stack ${swipeDirection ? `swiping-${swipeDirection}` : ''}`} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
+            {rows.length === 0 && <div className="empty-state roomy"><h3>No companies</h3><p className="muted">Adjust filters to rebuild the deck.</p></div>}
+            {rows.length > 0 && [0,1,2].map(offset => {
+              const base = selectedIndex < 0 ? 0 : selectedIndex;
+              const company = rows[(base + offset) % rows.length];
+              if (!company) return null;
+              return <button key={`${company.id}-${offset}`} type="button" className={`discovery-card discovery-card-${offset} ${offset === 0 ? 'active' : ''}`} onClick={() => offset === 0 ? undefined : selectCompany(company)}>
+                <div className={`discovery-card-glow ${categoryClass(company.sub_sector)}`}></div>
+                <div className="discovery-card-top">
+                  <span className={`category-mini ${categoryClass(company.sub_sector)}`}>{company.sub_sector || 'Global Fintech'}</span>
+                  <span className={`fit-dot ${fitTone(company.lean_fit_score)}`}>{company.lean_fit_score || '-'}</span>
+                </div>
+                <h3>{company.name}</h3>
+                <p>{company.country || company.region || 'Global'}{company.hq ? ` · ${company.hq}` : ''}</p>
+                <div className="discovery-card-footer">
+                  <span>{company.priority_tier || 'Priority TBD'}</span>
+                  <span>{offset === 0 ? 'Swipe or use arrows' : 'Up next'}</span>
+                </div>
+              </button>;
+            })}
+          </div>
+          <p className="swipe-help muted">Drag the card, use ← / →, or tap the controls. The deck loops continuously.</p>
+        </div>
+
+        <div className="company-detail-pane">
           {draft ? <>
             <div className="detail-hero-card">
               <div className="detail-title-block">
@@ -499,7 +533,6 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
                 </div>
               </div>
               <div className="save-indicator">
-                <span className="deck-position-pill">{selectedIndex >= 0 ? selectedIndex + 1 : 0} / {rows.length}</span>
                 {saveState === 'saving' && <><Loader2 size={15} className="spin"/> {saveMessage || 'Saving to Supabase...'}</>}
                 {saveState === 'saved' && <><CheckCircle2 size={15}/> {saveMessage || 'Saved to Supabase'}</>}
                 {saveState === 'error' && <span className="save-error">{saveMessage}</span>}
@@ -508,8 +541,6 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
             </div>
 
             <div className="company-action-strip">
-              <button className="btn secondary deck-nav-btn" type="button" onClick={() => navigateCompany(-1)} disabled={selectedIndex <= 0}><ChevronLeft size={14}/> Previous</button>
-              <button className="btn secondary deck-nav-btn" type="button" onClick={() => navigateCompany(1)} disabled={selectedIndex < 0 || selectedIndex >= rows.length - 1}>Next <ChevronRight size={14}/></button>
               <a className="btn secondary" href={draft.website_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!draft.website_url} onClick={e => { if (!draft.website_url) e.preventDefault(); }}>Website <ExternalLink size={14}/></a>
               <a className="btn secondary" href={draft.linkedin_company_url || undefined} target="_blank" rel="noreferrer" aria-disabled={!draft.linkedin_company_url} onClick={e => { if (!draft.linkedin_company_url) e.preventDefault(); }}>LinkedIn <ExternalLink size={14}/></a>
               <button className="btn secondary" type="button" onClick={() => draft && saveCompany(draft)} disabled={saveState === 'saving'}><Save size={14}/> Save now</button>
