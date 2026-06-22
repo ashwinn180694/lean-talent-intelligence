@@ -6,9 +6,11 @@ import { usePreloadRoutes } from './RoutePreloader';
 
 const nav = [
   { href: '/dashboard', label: 'Home', icon: '⌂' },
+  { href: '/categories', label: 'Categories', icon: '▦' },
+  { href: '/geographies', label: 'Geographies', icon: '◎' },
+  { href: '/tiers', label: 'Tiers', icon: '★' },
   { href: '/companies', label: 'Companies', icon: '◧' },
-  { href: '/candidates', label: 'Candidates', icon: '◎' },
-  { href: '/talent-pools', label: 'Talent Pools', icon: '◇' },
+  { href: '/intelligence', label: 'Intelligence', icon: '◬' },
   { href: '/settings', label: 'Settings', icon: '⚙' }
 ];
 
@@ -26,8 +28,8 @@ export default function FastSidebar({ email, displayName, title }: { email?: str
       <div className="brand v11-brand">
         <div className="brand-mark">L</div>
         <div>
-          <div>Lean Talent</div>
-          <span>Intelligence OS</span>
+          <div>Lean Market</div>
+          <span>Talent Intelligence</span>
         </div>
       </div>
       <nav className="nav v11-nav">
@@ -43,7 +45,7 @@ export default function FastSidebar({ email, displayName, title }: { email?: str
             <strong>{displayName || email.split('@')[0].replace(/[._-]+/g, ' ')}</strong>
             <span>{title || email}</span>
           </div>
-        </Link> : <div className="profile-mini-card ghost-profile"><div className="avatar-circle">LT</div><div className="profile-mini-copy"><strong>Lean Talent</strong><span>Signed out</span></div></div>}
+        </Link> : <div className="profile-mini-card ghost-profile"><div className="avatar-circle">LT</div><div className="profile-mini-copy"><strong>Lean Market</strong><span>Signed out</span></div></div>}
       </div>
     </aside>
   );
