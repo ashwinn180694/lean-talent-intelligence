@@ -134,8 +134,6 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
-  const [dragStartX, setDragStartX] = useState<number | null>(null);
 
   useEffect(() => {
     setAllCompanies(companies);
@@ -205,23 +203,7 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
     const nextIndex = direction === 'next'
       ? (current + 1) % rows.length
       : (current - 1 + rows.length) % rows.length;
-    setSwipeDirection(direction === 'next' ? 'right' : 'left');
-    window.setTimeout(() => {
-      selectCompany(rows[nextIndex]);
-      setSwipeDirection(null);
-    }, 190);
-  }
-
-  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
-    setDragStartX(event.clientX);
-  }
-
-  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
-    if (dragStartX === null) return;
-    const delta = event.clientX - dragStartX;
-    setDragStartX(null);
-    if (Math.abs(delta) < 45) return;
-    moveCompany(delta > 0 ? 'prev' : 'next');
+    selectCompany(rows[nextIndex]);
   }
 
   function selectCompany(company: Company) {
@@ -487,39 +469,35 @@ export default function CompanyClient({ companies, onCompaniesChange }: { compan
           </div>
         </div>
 
-        <div className="company-swipe-pane">
-          <div className="swipe-pane-header">
+        <div className="company-grid-pane">
+          <div className="grid-pane-header">
             <div>
-              <div className="section-kicker">Discovery deck</div>
+              <div className="section-kicker">Company cards</div>
               <strong>{selectedIndex >= 0 ? selectedIndex + 1 : 0} of {rows.length}</strong>
             </div>
-            <div className="swipe-controls">
-              <button className="icon-btn swipe-btn" type="button" onClick={() => moveCompany('prev')} aria-label="Previous company"><ChevronLeft size={20}/></button>
-              <button className="icon-btn swipe-btn" type="button" onClick={() => moveCompany('next')} aria-label="Next company"><ChevronRight size={20}/></button>
+            <div className="grid-controls">
+              <button className="icon-btn compact-nav-btn" type="button" onClick={() => moveCompany('prev')} aria-label="Previous company"><ChevronLeft size={18}/></button>
+              <button className="icon-btn compact-nav-btn" type="button" onClick={() => moveCompany('next')} aria-label="Next company"><ChevronRight size={18}/></button>
             </div>
           </div>
-          <div className={`company-card-stack ${swipeDirection ? `swiping-${swipeDirection}` : ''}`} onPointerDown={handlePointerDown} onPointerUp={handlePointerUp}>
-            {rows.length === 0 && <div className="empty-state roomy"><h3>No companies</h3><p className="muted">Adjust filters to rebuild the deck.</p></div>}
-            {rows.length > 0 && [0,1,2].map(offset => {
-              const base = selectedIndex < 0 ? 0 : selectedIndex;
-              const company = rows[(base + offset) % rows.length];
-              if (!company) return null;
-              return <button key={`${company.id}-${offset}`} type="button" className={`discovery-card discovery-card-${offset} ${offset === 0 ? 'active' : ''}`} onClick={() => offset === 0 ? undefined : selectCompany(company)}>
-                <div className={`discovery-card-glow ${categoryClass(company.sub_sector)}`}></div>
-                <div className="discovery-card-top">
-                  <span className={`category-mini ${categoryClass(company.sub_sector)}`}>{company.sub_sector || 'Global Fintech'}</span>
-                  <span className={`fit-dot ${fitTone(company.lean_fit_score)}`}>{company.lean_fit_score || '-'}</span>
-                </div>
-                <h3>{company.name}</h3>
-                <p>{company.country || company.region || 'Global'}{company.hq ? ` · ${company.hq}` : ''}</p>
-                <div className="discovery-card-footer">
-                  <span>{company.priority_tier || 'Priority TBD'}</span>
-                  <span>{offset === 0 ? 'Swipe or use arrows' : 'Up next'}</span>
-                </div>
-              </button>;
-            })}
+          <div className="compact-company-grid" role="list" aria-label="Companies">
+            {rows.length === 0 && <div className="empty-state roomy"><h3>No companies</h3><p className="muted">Adjust filters to rebuild the company grid.</p></div>}
+            {rows.map((company, idx) => <button key={company.id} type="button" role="listitem" data-company-id={company.id} className={`compact-company-card ${selectedId === company.id ? 'active' : ''}`} onClick={() => selectCompany(company)}>
+              <div className="compact-card-top">
+                <strong>{company.name}</strong>
+                <span className={`fit-dot ${fitTone(company.lean_fit_score)}`}>{company.lean_fit_score || '-'}</span>
+              </div>
+              <div className="compact-card-meta">
+                <span className={`category-mini ${categoryClass(company.sub_sector)}`}>{company.sub_sector || 'Global Fintech'}</span>
+                <span>{company.country || company.region || 'Global'}</span>
+              </div>
+              <div className="compact-card-footer">
+                <span>{company.priority_tier || 'Priority TBD'}</span>
+                <span>{idx + 1}</span>
+              </div>
+            </button>)}
           </div>
-          <p className="swipe-help muted">Drag the card, use ← / →, or tap the controls. The deck loops continuously.</p>
+          <p className="compact-grid-help muted">Click a card, use ↑/↓ or ←/→, and edit details on the right.</p>
         </div>
 
         <div className="company-detail-pane">

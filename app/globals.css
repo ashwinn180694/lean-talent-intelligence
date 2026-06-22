@@ -504,3 +504,56 @@ body{background:radial-gradient(circle at top left,rgba(99,102,241,.10),transpar
   .market-hero, .market-home-panel, .market-workspace-header { padding: 18px; border-radius: 22px; }
   .market-workspace-stats { grid-template-columns: 1fr; }
 }
+
+/* v14.1 Compact Market Cards - removes Tinder/deck experience and increases scan density */
+.company-master-detail.discovery-workspace{
+  grid-template-columns:minmax(240px,280px) minmax(420px,1.05fr) minmax(420px,1.15fr)!important;
+  min-height:680px!important;
+  background:#fff!important;
+  border-radius:28px!important;
+  overflow:hidden!important;
+}
+.company-grid-pane{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  gap:14px;
+  padding:18px;
+  border-right:1px solid var(--line);
+  background:linear-gradient(180deg,#ffffff,#f8fafc);
+  min-width:0;
+}
+.grid-pane-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.grid-pane-header strong{font-size:18px;color:#111827;letter-spacing:-.02em}.grid-controls{display:flex;gap:8px}.compact-nav-btn{width:38px;height:38px;border:1px solid #dbe3ee;background:#fff;border-radius:999px;box-shadow:0 10px 22px rgba(15,23,42,.07)}
+.compact-company-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(155px,1fr));
+  gap:10px;
+  align-content:start;
+  overflow:auto;
+  padding:2px 4px 6px 2px;
+  min-width:0;
+}
+.compact-company-card{
+  min-width:0;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  border-radius:16px;
+  padding:12px;
+  text-align:left;
+  color:#111827;
+  cursor:pointer;
+  display:grid;
+  gap:10px;
+  box-shadow:0 8px 20px rgba(15,23,42,.045);
+  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease;
+}
+.compact-company-card:hover{transform:translateY(-2px);border-color:#c7d2fe;box-shadow:0 14px 30px rgba(15,23,42,.08);background:#fbfdff}.compact-company-card.active{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.11),0 18px 38px rgba(15,23,42,.09)}
+.compact-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;min-width:0}.compact-card-top strong{font-size:14px;line-height:1.18;letter-spacing:-.02em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.compact-card-meta{display:flex;flex-wrap:wrap;gap:6px;color:#667085;font-size:11px;font-weight:800;min-width:0}.compact-card-meta span:not(.category-mini){border:1px solid #eef2f6;background:#f8fafc;border-radius:999px;padding:4px 7px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.compact-card-footer{display:flex;justify-content:space-between;gap:8px;color:#667085;text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:950;border-top:1px solid #f1f5f9;padding-top:9px}.compact-grid-help{text-align:center;font-size:12px;margin:0}.compact-discovery-list{max-height:calc(100vh - 315px)!important;min-height:520px!important}.company-row-card{padding:10px 11px!important;border-radius:14px!important}.row-title-line strong{font-size:13px!important}.row-meta-line{font-size:11px!important}.company-detail-pane{min-width:0}.detail-hero-card{padding:16px!important;border-radius:22px!important}.inline-edit-grid{gap:10px!important}.inline-edit-field{min-width:0}.company-action-strip{gap:8px!important;flex-wrap:wrap}.similar-company-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))!important}.similar-company-card{padding:10px!important;border-radius:14px!important}.market-main-card{padding:18px!important;border-radius:22px!important}.market-main-card h2{font-size:24px!important}.market-subcards{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}.market-subcard{padding:9px 10px!important;border-radius:13px!important}.market-subcard strong{font-size:12px!important}.market-subcard span{font-size:11px!important}.market-company-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))!important;gap:11px!important}.market-company-subcard{padding:12px!important;border-radius:16px!important;box-shadow:0 8px 20px rgba(15,23,42,.045)!important}.market-company-subcard:hover{transform:translateY(-2px)!important;box-shadow:0 14px 30px rgba(15,23,42,.08)!important}.market-company-subcard strong{font-size:14px!important}.company-subcard-meta{gap:6px!important}.market-company-subcard p{font-size:12px!important;line-height:1.35!important;-webkit-line-clamp:2!important;display:-webkit-box!important;-webkit-box-orient:vertical!important;overflow:hidden!important}.fit-dot{min-width:30px;height:30px;font-size:12px}.category-mini{font-size:10.5px!important;padding:4px 7px!important}
+@media(max-width:1280px){.company-master-detail.discovery-workspace{grid-template-columns:minmax(220px,260px) minmax(360px,1fr)!important}.company-grid-pane{border-right:0}.company-detail-pane{border-top:1px solid var(--line)}.compact-company-grid{grid-template-columns:repeat(auto-fill,minmax(145px,1fr))}}
+@media(max-width:1080px){.company-master-detail.discovery-workspace{grid-template-columns:1fr!important}.compact-discovery-list{max-height:240px!important;min-height:180px!important}.company-grid-pane{border-bottom:1px solid var(--line)}.compact-company-grid{max-height:420px}.market-subcards{grid-template-columns:1fr!important}}
+@media(max-width:640px){.compact-company-grid,.market-company-grid{grid-template-columns:1fr!important}.grid-pane-header{align-items:flex-start}.company-grid-pane{padding:14px}.market-main-card h2{font-size:21px!important}}
