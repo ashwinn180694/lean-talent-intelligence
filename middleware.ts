@@ -35,13 +35,19 @@ export async function middleware(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some(p => pathname.startsWith(p));
 
   if (!user && !isPublic) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
   }
 
   if (user && pathname === '/login') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    const url = request.nextUrl.clone();
+    url.pathname = '/dashboard';
+    return NextResponse.redirect(url);
   }
 
+  // IMPORTANT: always return supabaseResponse so refreshed auth cookies
+  // (set inside setAll above) are written to the browser on every navigation.
   return supabaseResponse;
 }
 
