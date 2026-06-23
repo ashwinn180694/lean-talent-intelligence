@@ -27,18 +27,10 @@ export default async function GeographiesPage() {
               <Link
                 key={name}
                 href={`/geographies/${encodeURIComponent(name)}`}
+                className="hover-card"
                 style={{
                   display: 'block', background: '#fff', border: '1px solid #e8e6e0',
                   borderRadius: '10px', padding: '18px', textDecoration: 'none',
-                  transition: 'border-color 0.15s, box-shadow 0.15s'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(196,126,58,0.4)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,126,58,0.08)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = '#e8e6e0';
-                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>

@@ -28,7 +28,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div style={{ padding: '28px 28px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         {/* Hero */}
         <div>
@@ -118,14 +118,8 @@ export default async function DashboardPage() {
   );
 }
 
-function Section({
-  title, icon, count, href, children
-}: {
-  title: string;
-  icon: React.ReactNode;
-  count: number;
-  href: string;
-  children: React.ReactNode;
+function Section({ title, icon, count, href, children }: {
+  title: string; icon: React.ReactNode; count: number; href: string; children: React.ReactNode;
 }) {
   return (
     <section>
@@ -135,10 +129,7 @@ function Section({
           <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{title}</h2>
           <span style={{ background: '#f0ede8', color: '#9a9080', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{count}</span>
         </div>
-        <Link href={href} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#c47e3a', textDecoration: 'none' }}
-          onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
-          onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
-        >
+        <Link href={href} className="hover-link" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#c47e3a', textDecoration: 'none' }}>
           View all <ArrowRight size={11} />
         </Link>
       </div>
@@ -147,31 +138,16 @@ function Section({
   );
 }
 
-function MarketCard({
-  title, count, avgFit: avg, tier1, preview, href
-}: {
-  title: string;
-  count: number;
-  avgFit: number;
-  tier1: number;
-  preview: string[];
-  href: string;
+function MarketCard({ title, count, avgFit: avg, tier1, preview, href }: {
+  title: string; count: number; avgFit: number; tier1: number; preview: string[]; href: string;
 }) {
   return (
     <Link
       href={href}
+      className="hover-card"
       style={{
         display: 'block', background: '#fff', border: '1px solid #e8e6e0',
         borderRadius: '10px', padding: '16px', textDecoration: 'none',
-        transition: 'border-color 0.15s, box-shadow 0.15s'
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'rgba(196,126,58,0.4)';
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,126,58,0.08)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = '#e8e6e0';
-        e.currentTarget.style.boxShadow = 'none';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>

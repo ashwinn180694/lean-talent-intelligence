@@ -52,19 +52,14 @@ export default async function IntelligencePage() {
                 const avg = avgFit(row.rows);
                 const cov = coverageLabel(t1);
                 return (
-                  <tr
-                    key={`${row.type}-${row.name}`}
-                    style={{ borderBottom: '1px solid #f8f7f4', transition: 'background 0.1s', cursor: 'default' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#fdfcfb')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
+                  <tr key={`${row.type}-${row.name}`} className="hover-row" style={{ borderBottom: '1px solid #f8f7f4' }}>
                     <td style={{ padding: '11px 18px', fontWeight: 500, color: '#1a1a2e' }}>{row.name}</td>
                     <td style={{ padding: '11px 18px', color: '#9a9080' }}>{row.type}</td>
                     <td style={{ padding: '11px 18px', textAlign: 'right', color: '#5a5650' }}>{row.rows.length}</td>
                     <td style={{ padding: '11px 18px', textAlign: 'right', color: '#5a5650' }}>{avg || '—'}</td>
                     <td style={{ padding: '11px 18px', textAlign: 'right', color: '#5a5650' }}>{t1}</td>
                     <td style={{ padding: '11px 18px' }}>
-                      <span style={{ ...cov, borderRadius: '99px', padding: '2px 9px', fontSize: '11px', fontWeight: 500 }}>
+                      <span style={{ background: cov.bg, color: cov.color, borderRadius: '99px', padding: '2px 9px', fontSize: '11px', fontWeight: 500 }}>
                         {cov.label}
                       </span>
                     </td>

@@ -189,6 +189,25 @@
     color: var(--color-text-muted);
   }
 
+  /* ── Hover helpers (for server component pages — no JS handlers) ── */
+  .hover-card {
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .hover-card:hover {
+    border-color: rgba(196, 126, 58, 0.4) !important;
+    box-shadow: 0 2px 8px rgba(196, 126, 58, 0.08);
+  }
+  .hover-row:hover {
+    background: #fdfcfb;
+  }
+  .hover-link {
+    transition: color 0.12s;
+  }
+  .hover-link:hover {
+    color: #c47e3a !important;
+    text-decoration: underline;
+  }
+
   /* ── Stat cards ── */
   .stat-card {
     background: var(--color-card);

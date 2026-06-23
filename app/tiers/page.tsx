@@ -36,23 +36,15 @@ export default async function TiersPage() {
               <Link
                 key={name}
                 href={`/tiers/${encodeURIComponent(name)}`}
+                className="hover-card"
                 style={{
                   display: 'block', background: '#fff', border: '1px solid #e8e6e0',
                   borderRadius: '10px', padding: '18px', textDecoration: 'none',
-                  transition: 'border-color 0.15s, box-shadow 0.15s'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = 'rgba(196,126,58,0.4)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,126,58,0.08)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = '#e8e6e0';
-                  e.currentTarget.style.boxShadow = 'none';
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{name}</h2>
-                  <span style={{ ...style, borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{rows.length}</span>
+                  <span style={{ background: style.bg, color: style.color, borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{rows.length}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#9a9080', marginBottom: '12px' }}>
                   <span>Avg fit <strong style={{ color: '#5a5650' }}>{avgFit(rows) || '—'}</strong></span>

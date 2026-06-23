@@ -34,16 +34,16 @@ export function fitTone(score?: number | null): 'high' | 'mid' | 'low' | 'neutra
 }
 
 export const FIT_COLORS: Record<string, string> = {
-  high: 'bg-emerald-100 text-emerald-800',
-  mid: 'bg-amber-100 text-amber-800',
-  low: 'bg-red-100 text-red-800',
-  neutral: 'bg-slate-100 text-slate-500'
+  high:    'bg-green-50 text-green-700',
+  mid:     'bg-amber-50 text-amber-700',
+  low:     'bg-red-50 text-red-600',
+  neutral: 'bg-stone-100 text-stone-500'
 };
 
 export const TIER_COLORS: Record<string, string> = {
-  'Tier 1': 'bg-violet-100 text-violet-800',
-  'Tier 2': 'bg-blue-100 text-blue-800',
-  'Tier 3': 'bg-slate-100 text-slate-600'
+  'Tier 1': 'bg-amber-50 text-amber-700',
+  'Tier 2': 'bg-blue-50 text-blue-700',
+  'Tier 3': 'bg-stone-100 text-stone-500'
 };
 
 // ── Aggregation helpers ──────────────────────────────────────────────────────
