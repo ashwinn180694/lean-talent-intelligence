@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Tag, Globe, Star,
-  Building2, Lightbulb, Settings, LogOut, Palette
+  Building2, Lightbulb, Settings, LogOut, Palette,
+  Heart, Map
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import { useTheme, type Theme } from '@/components/ThemeProvider';
@@ -15,7 +16,9 @@ const NAV = [
   { href: '/categories',   label: 'Categories',   icon: Tag },
   { href: '/geographies',  label: 'Geographies',  icon: Globe },
   { href: '/tiers',        label: 'Tiers',        icon: Star },
-  { href: '/intelligence', label: 'Intelligence', icon: Lightbulb }
+  { href: '/intelligence', label: 'Intelligence', icon: Lightbulb },
+  { href: '/watchlist',   label: 'Watchlist',    icon: Heart },
+  { href: '/market-map',  label: 'Market Map',   icon: Map },
 ];
 
 const THEME_DOTS: Record<Theme, string> = {

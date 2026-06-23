@@ -20,6 +20,18 @@ export type Company = {
   awesomefintech_categories?: string | null;
   awesomefintech_rank?: string | null;
   updated_at?: string | null;
+  // Enrichment fields
+  description?: string | null;
+  founded_year?: number | null;
+  headquarters?: string | null;
+  headcount_range?: string | null;
+  funding_stage?: string | null;
+  total_raised?: string | null;
+  latest_funding_date?: string | null;
+  key_investors?: string | null;
+  linkedin_url?: string | null;
+  tags?: string[] | null;
+  last_enriched_at?: string | null;
 };
 
 export type Candidate = {

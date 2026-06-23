@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Globe, Linkedin } from 'lucide-react';
 import { fitTone } from '@/lib/market';
 import type { Company } from '@/lib/types';
+import WatchlistButton from '@/components/WatchlistButton';
 
 const FIT_STYLES: Record<string, { bg: string; color: string }> = {
   high:    { bg: '#f0fdf4', color: '#15803d' },
@@ -18,12 +19,14 @@ const TIER_STYLES: Record<string, { bg: string; color: string }> = {
   'Tier 3': { bg: '#f8f7f4', color: '#9a9080' }
 };
 
-export default function CompanyCard({ company }: { company: Company }) {
+export default function CompanyCard({ company, isWatched }: { company: Company; isWatched?: boolean }) {
   const fitKey = fitTone(company.lean_fit_score);
   const fitStyle = FIT_STYLES[fitKey];
   const tierStyle = company.priority_tier ? TIER_STYLES[company.priority_tier] : null;
 
   return (
+    <div style={{ position: 'relative' }}>
+      <WatchlistButton companyId={company.id} initialWatched={isWatched ?? false} />
     <Link
       href={`/companies/${company.id}`}
       style={{
@@ -111,5 +114,6 @@ export default function CompanyCard({ company }: { company: Company }) {
         </div>
       )}
     </Link>
+    </div>
   );
 }
