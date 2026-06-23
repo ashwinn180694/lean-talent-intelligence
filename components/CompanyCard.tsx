@@ -28,22 +28,22 @@ export default function CompanyCard({ company }: { company: Company }) {
       href={`/companies/${company.id}`}
       style={{
         display: 'flex', flexDirection: 'column', gap: '10px',
-        background: '#fff', border: '1px solid #e8e6e0', borderRadius: '10px',
+        background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px',
         padding: '16px', textDecoration: 'none',
         transition: 'border-color 0.15s, box-shadow 0.15s'
       }}
       onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'rgba(196,126,58,0.35)';
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,126,58,0.07)';
+        e.currentTarget.style.borderColor = 'var(--hover-border)';
+        e.currentTarget.style.boxShadow = '0 2px 8px var(--hover-shadow)';
       }}
       onMouseLeave={e => {
-        e.currentTarget.style.borderColor = '#e8e6e0';
+        e.currentTarget.style.borderColor = 'var(--border)';
         e.currentTarget.style.boxShadow = 'none';
       }}
     >
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-        <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: '#1a1a2e', margin: 0, lineHeight: 1.35 }}>
+        <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, lineHeight: 1.35 }}>
           {company.name}
         </h3>
         {company.lean_fit_score != null && (
@@ -56,7 +56,7 @@ export default function CompanyCard({ company }: { company: Company }) {
       {/* Badges */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
         {company.sub_sector && (
-          <span style={{ background: '#f0ede8', color: '#7a7068', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
+          <span style={{ background: 'var(--hover-row-bg)', color: 'var(--text-muted)', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
             {company.sub_sector}
           </span>
         )}
@@ -66,7 +66,7 @@ export default function CompanyCard({ company }: { company: Company }) {
           </span>
         )}
         {(company.country || company.region) && (
-          <span style={{ background: '#f0ede8', color: '#9a9080', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
+          <span style={{ background: 'var(--hover-row-bg)', color: 'var(--text-muted)', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
             {company.country || company.region}
           </span>
         )}
@@ -74,23 +74,23 @@ export default function CompanyCard({ company }: { company: Company }) {
 
       {/* Rationale */}
       {company.rationale && (
-        <p style={{ fontSize: '12px', color: '#9a9080', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {company.rationale}
         </p>
       )}
 
       {/* Links */}
       {(company.website_url || company.linkedin_company_url) && (
-        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '10px', borderTop: '1px solid #f0ede8' }}>
+        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '10px', borderTop: '1px solid var(--hover-row-bg)' }}>
           {company.website_url && (
             <a
               href={company.website_url}
               target="_blank"
               rel="noreferrer"
               onClick={e => e.stopPropagation()}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#b8b4aa', textDecoration: 'none', transition: 'color 0.12s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#c47e3a')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#b8b4aa')}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: 'var(--text-faint)', textDecoration: 'none', transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
             >
               <Globe size={11} /> Website
             </a>
@@ -101,9 +101,9 @@ export default function CompanyCard({ company }: { company: Company }) {
               target="_blank"
               rel="noreferrer"
               onClick={e => e.stopPropagation()}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#b8b4aa', textDecoration: 'none', transition: 'color 0.12s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#c47e3a')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#b8b4aa')}
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: 'var(--text-faint)', textDecoration: 'none', transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
             >
               <Linkedin size={11} /> LinkedIn
             </a>

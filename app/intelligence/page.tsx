@@ -24,23 +24,23 @@ export default async function IntelligencePage() {
 
   return (
     <AppShell>
-      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="page-enter" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div>
-          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#c47e3a', marginBottom: '4px' }}>Intelligence</p>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Market Coverage</h1>
-          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9a9080' }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--brand)', marginBottom: '4px' }}>Intelligence</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Market Coverage</h1>
+          <p style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-muted)' }}>
             Company density, priority coverage, and fit scores by market and region.
           </p>
         </div>
 
-        <div style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '10px', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #f0ede8', background: '#f8f7f4' }}>
+              <tr style={{ borderBottom: '1px solid var(--hover-row-bg)', background: 'var(--page-bg)' }}>
                 {['Market', 'Type', 'Companies', 'Avg Fit', 'Tier 1', 'Coverage'].map((h, i) => (
                   <th key={h} style={{
                     padding: '11px 18px', textAlign: i >= 2 && i <= 4 ? 'right' : 'left',
-                    fontSize: '11px', fontWeight: 600, color: '#9a9080',
+                    fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)',
                     textTransform: 'uppercase', letterSpacing: '0.06em'
                   }}>{h}</th>
                 ))}
@@ -52,12 +52,12 @@ export default async function IntelligencePage() {
                 const avg = avgFit(row.rows);
                 const cov = coverageLabel(t1);
                 return (
-                  <tr key={`${row.type}-${row.name}`} className="hover-row" style={{ borderBottom: '1px solid #f8f7f4' }}>
-                    <td style={{ padding: '11px 18px', fontWeight: 500, color: '#1a1a2e' }}>{row.name}</td>
-                    <td style={{ padding: '11px 18px', color: '#9a9080' }}>{row.type}</td>
-                    <td style={{ padding: '11px 18px', textAlign: 'right', color: '#5a5650' }}>{row.rows.length}</td>
-                    <td style={{ padding: '11px 18px', textAlign: 'right', color: '#5a5650' }}>{avg || '—'}</td>
-                    <td style={{ padding: '11px 18px', textAlign: 'right', color: '#5a5650' }}>{t1}</td>
+                  <tr key={`${row.type}-${row.name}`} className="hover-row" style={{ borderBottom: '1px solid var(--page-bg)' }}>
+                    <td style={{ padding: '11px 18px', fontWeight: 500, color: 'var(--text-primary)' }}>{row.name}</td>
+                    <td style={{ padding: '11px 18px', color: 'var(--text-muted)' }}>{row.type}</td>
+                    <td style={{ padding: '11px 18px', textAlign: 'right', color: 'var(--text-secondary)' }}>{row.rows.length}</td>
+                    <td style={{ padding: '11px 18px', textAlign: 'right', color: 'var(--text-secondary)' }}>{avg || '—'}</td>
+                    <td style={{ padding: '11px 18px', textAlign: 'right', color: 'var(--text-secondary)' }}>{t1}</td>
                     <td style={{ padding: '11px 18px' }}>
                       <span style={{ background: cov.bg, color: cov.color, borderRadius: '99px', padding: '2px 9px', fontSize: '11px', fontWeight: 500 }}>
                         {cov.label}

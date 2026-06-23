@@ -26,22 +26,22 @@ export default async function TierPage({ params }: { params: { slug: string } })
 
   return (
     <AppShell>
-      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <Link href="/tiers" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#c47e3a', textDecoration: 'none' }}>
+      <div className="page-enter" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <Link href="/tiers" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--brand)', textDecoration: 'none' }}>
           <ArrowLeft size={13} /> Tiers
         </Link>
         <div>
-          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#c47e3a', marginBottom: '4px' }}>Priority tier</p>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--brand)', marginBottom: '4px' }}>Priority tier</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{name}</h1>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{name}</h1>
             <span style={{ ...style, borderRadius: '99px', padding: '3px 10px', fontSize: '12px', fontWeight: 600 }}>{companies.length}</span>
           </div>
-          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9a9080' }}>
+          <p style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-muted)' }}>
             {companies.length} companies · Avg fit {avgFit(companies) || '—'}
           </p>
         </div>
         {companies.length === 0 ? (
-          <div className="card" style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: '#9a9080' }}>
+          <div className="card" style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
             No companies in this tier yet.
           </div>
         ) : (

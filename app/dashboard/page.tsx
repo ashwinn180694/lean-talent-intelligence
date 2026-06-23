@@ -28,17 +28,17 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div className="page-enter" style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
         {/* Hero */}
         <div>
-          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#c47e3a', marginBottom: '4px' }}>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: 'var(--brand)', marginBottom: '4px' }}>
             Market intelligence
           </p>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
             Lean Talent Market Map
           </h1>
-          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9a9080' }}>
+          <p style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-muted)' }}>
             {companies.length} companies across {categories.length} categories and {geographies.length} regions.
           </p>
         </div>
@@ -51,13 +51,13 @@ export default async function DashboardPage() {
             { label: 'Avg fit score', value: avgFit(companies) || '—', icon: Lightbulb },
             { label: 'High-fit universe', value: highFit.length, icon: Lightbulb }
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '10px', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div key={label} style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '36px', height: '36px', flexShrink: 0, borderRadius: '8px', background: 'rgba(196,126,58,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icon size={16} style={{ color: '#c47e3a' }} />
+                <Icon size={16} style={{ color: 'var(--brand)' }} />
               </div>
               <div>
-                <p style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{value}</p>
-                <p style={{ fontSize: '11.5px', color: '#9a9080', margin: 0 }}>{label}</p>
+                <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{value}</p>
+                <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: 0 }}>{label}</p>
               </div>
             </div>
           ))}
@@ -125,11 +125,11 @@ function Section({ title, icon, count, href, children }: {
     <section>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <span style={{ color: '#c47e3a', display: 'flex' }}>{icon}</span>
-          <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{title}</h2>
-          <span style={{ background: '#f0ede8', color: '#9a9080', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{count}</span>
+          <span style={{ color: 'var(--brand)', display: 'flex' }}>{icon}</span>
+          <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{title}</h2>
+          <span style={{ background: 'var(--hover-row-bg)', color: 'var(--text-muted)', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{count}</span>
         </div>
-        <Link href={href} className="hover-link" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#c47e3a', textDecoration: 'none' }}>
+        <Link href={href} className="hover-link" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--brand)', textDecoration: 'none' }}>
           View all <ArrowRight size={11} />
         </Link>
       </div>
@@ -146,21 +146,21 @@ function MarketCard({ title, count, avgFit: avg, tier1, preview, href }: {
       href={href}
       className="hover-card"
       style={{
-        display: 'block', background: '#fff', border: '1px solid #e8e6e0',
+        display: 'block', background: 'var(--card-bg)', border: '1px solid var(--border)',
         borderRadius: '10px', padding: '16px', textDecoration: 'none',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{title}</h3>
-        <span style={{ background: 'rgba(196,126,58,0.1)', color: '#c47e3a', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{count}</span>
+        <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{title}</h3>
+        <span style={{ background: 'rgba(196,126,58,0.1)', color: 'var(--brand)', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{count}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px' }}>
-        <span style={{ fontSize: '11.5px', color: '#9a9080' }}>Avg fit <strong style={{ color: '#5a5650' }}>{avg || '—'}</strong></span>
-        <span style={{ fontSize: '11.5px', color: '#9a9080' }}>Tier 1 <strong style={{ color: '#5a5650' }}>{tier1}</strong></span>
+        <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>Avg fit <strong style={{ color: 'var(--text-secondary)' }}>{avg || '—'}</strong></span>
+        <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>Tier 1 <strong style={{ color: 'var(--text-secondary)' }}>{tier1}</strong></span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {preview.map(name => (
-          <div key={name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11.5px', color: '#9a9080', background: '#f8f7f4', borderRadius: '5px', padding: '3px 8px' }}>
+          <div key={name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11.5px', color: 'var(--text-muted)', background: 'var(--page-bg)', borderRadius: '5px', padding: '3px 8px' }}>
             {name}
           </div>
         ))}
