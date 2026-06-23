@@ -7,6 +7,7 @@ export const MARKET_CATEGORIES = [
   'Trading, Crypto & Investing',
   'Payments Infrastructure',
   'OpenBanking',
+  'Stablecoins',
   'KSA',
   'UAE',
   'Global Fintech',
