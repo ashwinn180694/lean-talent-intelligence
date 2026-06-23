@@ -28,39 +28,44 @@ export default async function DashboardPage() {
 
   return (
     <AppShell>
-      <div className="p-6 space-y-8">
+      <div style={{ padding: '28px 28px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+
         {/* Hero */}
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-1">Market intelligence</p>
-          <h1 className="text-2xl font-bold text-slate-900">Lean Talent Market Map</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#c47e3a', marginBottom: '4px' }}>
+            Market intelligence
+          </p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>
+            Lean Talent Market Map
+          </h1>
+          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9a9080' }}>
             {companies.length} companies across {categories.length} categories and {geographies.length} regions.
           </p>
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
           {[
             { label: 'Total companies', value: companies.length, icon: Building2 },
             { label: 'Tier 1', value: tierOneCount(companies), icon: Star },
             { label: 'Avg fit score', value: avgFit(companies) || '—', icon: Lightbulb },
             { label: 'High-fit universe', value: highFit.length, icon: Lightbulb }
           ].map(({ label, value, icon: Icon }) => (
-            <div key={label} className="card px-5 py-4 flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10">
-                <Icon size={18} className="text-brand" />
+            <div key={label} style={{ background: '#fff', border: '1px solid #e8e6e0', borderRadius: '10px', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '36px', height: '36px', flexShrink: 0, borderRadius: '8px', background: 'rgba(196,126,58,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon size={16} style={{ color: '#c47e3a' }} />
               </div>
               <div>
-                <p className="text-xl font-bold text-slate-900">{value}</p>
-                <p className="text-xs text-slate-500">{label}</p>
+                <p style={{ fontSize: '20px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{value}</p>
+                <p style={{ fontSize: '11.5px', color: '#9a9080', margin: 0 }}>{label}</p>
               </div>
             </div>
           ))}
         </div>
 
         {/* Categories */}
-        <Section title="Categories" icon={<Tag size={16} />} count={categories.length} href="/categories">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Section title="Categories" icon={<Tag size={15} />} count={categories.length} href="/categories">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             {categories.slice(0, 6).map(({ name, companies: rows }) => (
               <MarketCard
                 key={name}
@@ -76,8 +81,8 @@ export default async function DashboardPage() {
         </Section>
 
         {/* Geographies */}
-        <Section title="Geographies" icon={<Globe size={16} />} count={geographies.length} href="/geographies">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <Section title="Geographies" icon={<Globe size={15} />} count={geographies.length} href="/geographies">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             {geographies.slice(0, 6).map(([geo, rows]) => (
               <MarketCard
                 key={geo}
@@ -93,8 +98,8 @@ export default async function DashboardPage() {
         </Section>
 
         {/* Tiers */}
-        <Section title="Priority Tiers" icon={<Star size={16} />} count={tiers.length} href="/tiers">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Section title="Priority Tiers" icon={<Star size={15} />} count={tiers.length} href="/tiers">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
             {tiers.map(({ name, companies: rows }) => (
               <MarketCard
                 key={name}
@@ -114,11 +119,7 @@ export default async function DashboardPage() {
 }
 
 function Section({
-  title,
-  icon,
-  count,
-  href,
-  children
+  title, icon, count, href, children
 }: {
   title: string;
   icon: React.ReactNode;
@@ -128,14 +129,17 @@ function Section({
 }) {
   return (
     <section>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-brand">{icon}</span>
-          <h2 className="text-base font-semibold text-slate-800">{title}</h2>
-          <span className="badge bg-slate-100 text-slate-500">{count}</span>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          <span style={{ color: '#c47e3a', display: 'flex' }}>{icon}</span>
+          <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{title}</h2>
+          <span style={{ background: '#f0ede8', color: '#9a9080', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{count}</span>
         </div>
-        <Link href={href} className="flex items-center gap-1 text-xs text-brand hover:underline">
-          View all <ArrowRight size={12} />
+        <Link href={href} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: '#c47e3a', textDecoration: 'none' }}
+          onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+          onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+        >
+          View all <ArrowRight size={11} />
         </Link>
       </div>
       {children}
@@ -144,12 +148,7 @@ function Section({
 }
 
 function MarketCard({
-  title,
-  count,
-  avgFit: avg,
-  tier1,
-  preview,
-  href
+  title, count, avgFit: avg, tier1, preview, href
 }: {
   title: string;
   count: number;
@@ -161,21 +160,31 @@ function MarketCard({
   return (
     <Link
       href={href}
-      className="card p-4 hover:border-brand/30 hover:shadow-md transition group"
+      style={{
+        display: 'block', background: '#fff', border: '1px solid #e8e6e0',
+        borderRadius: '10px', padding: '16px', textDecoration: 'none',
+        transition: 'border-color 0.15s, box-shadow 0.15s'
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'rgba(196,126,58,0.4)';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,126,58,0.08)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = '#e8e6e0';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
     >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="text-sm font-semibold text-slate-800 group-hover:text-brand transition">
-          {title}
-        </h3>
-        <span className="badge bg-brand/10 text-brand">{count}</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+        <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{title}</h3>
+        <span style={{ background: 'rgba(196,126,58,0.1)', color: '#c47e3a', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{count}</span>
       </div>
-      <div className="flex items-center gap-4 mb-3 text-xs text-slate-500">
-        <span>Avg fit <strong className="text-slate-700">{avg || '—'}</strong></span>
-        <span>Tier 1 <strong className="text-slate-700">{tier1}</strong></span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '11.5px', color: '#9a9080' }}>Avg fit <strong style={{ color: '#5a5650' }}>{avg || '—'}</strong></span>
+        <span style={{ fontSize: '11.5px', color: '#9a9080' }}>Tier 1 <strong style={{ color: '#5a5650' }}>{tier1}</strong></span>
       </div>
-      <div className="space-y-1">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {preview.map(name => (
-          <div key={name} className="truncate text-xs text-slate-500 bg-slate-50 rounded px-2 py-0.5">
+          <div key={name} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '11.5px', color: '#9a9080', background: '#f8f7f4', borderRadius: '5px', padding: '3px 8px' }}>
             {name}
           </div>
         ))}

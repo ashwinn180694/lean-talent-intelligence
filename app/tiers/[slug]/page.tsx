@@ -3,8 +3,14 @@ import Link from 'next/link';
 import AppShell from '@/components/AppShell';
 import CompanyCard from '@/components/CompanyCard';
 import { createSupabaseServer } from '@/lib/supabase-server';
-import { avgFit, TIER_COLORS, unslug } from '@/lib/market';
+import { avgFit, unslug } from '@/lib/market';
 import type { Company } from '@/lib/types';
+
+const TIER_STYLES: Record<string, { bg: string; color: string }> = {
+  'Tier 1': { bg: '#fef7ed', color: '#c47e3a' },
+  'Tier 2': { bg: '#eff6ff', color: '#2563eb' },
+  'Tier 3': { bg: '#f8f7f4', color: '#9a9080' }
+};
 
 export default async function TierPage({ params }: { params: { slug: string } }) {
   const name = unslug(params.slug);
@@ -16,28 +22,30 @@ export default async function TierPage({ params }: { params: { slug: string } })
     .order('lean_fit_score', { ascending: false })
     .order('name');
   const companies = (data || []) as Company[];
-  const color = TIER_COLORS[name] ?? 'bg-slate-100 text-slate-600';
+  const style = TIER_STYLES[name] ?? { bg: '#f8f7f4', color: '#9a9080' };
 
   return (
     <AppShell>
-      <div className="p-6 space-y-5">
-        <Link href="/tiers" className="inline-flex items-center gap-1.5 text-sm text-brand hover:underline">
-          <ArrowLeft size={14} /> Tiers
+      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <Link href="/tiers" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#c47e3a', textDecoration: 'none' }}>
+          <ArrowLeft size={13} /> Tiers
         </Link>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-1">Priority tier</p>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900">{name}</h1>
-            <span className={`badge text-sm ${color}`}>{companies.length}</span>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#c47e3a', marginBottom: '4px' }}>Priority tier</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{name}</h1>
+            <span style={{ ...style, borderRadius: '99px', padding: '3px 10px', fontSize: '12px', fontWeight: 600 }}>{companies.length}</span>
           </div>
-          <p className="mt-1 text-sm text-slate-500">
+          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9a9080' }}>
             {companies.length} companies · Avg fit {avgFit(companies) || '—'}
           </p>
         </div>
         {companies.length === 0 ? (
-          <div className="card p-12 text-center text-sm text-slate-500">No companies in this tier yet.</div>
+          <div className="card" style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: '#9a9080' }}>
+            No companies in this tier yet.
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
             {companies.map(c => <CompanyCard key={c.id} company={c} />)}
           </div>
         )}

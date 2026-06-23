@@ -19,23 +19,23 @@ export default async function CategoryPage({ params }: { params: { slug: string 
 
   return (
     <AppShell>
-      <div className="p-6 space-y-5">
-        <Link href="/categories" className="inline-flex items-center gap-1.5 text-sm text-brand hover:underline">
-          <ArrowLeft size={14} /> Categories
+      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <Link href="/categories" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#c47e3a', textDecoration: 'none' }}>
+          <ArrowLeft size={13} /> Categories
         </Link>
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-1">Category</p>
-            <h1 className="text-2xl font-bold text-slate-900">{name}</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              {companies.length} companies · Avg fit {avgFit(companies) || '—'} · {tierOneCount(companies)} Tier 1
-            </p>
-          </div>
+        <div>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#c47e3a', marginBottom: '4px' }}>Category</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>{name}</h1>
+          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9a9080' }}>
+            {companies.length} companies · Avg fit {avgFit(companies) || '—'} · {tierOneCount(companies)} Tier 1
+          </p>
         </div>
         {companies.length === 0 ? (
-          <div className="card p-12 text-center text-sm text-slate-500">No companies in this category yet.</div>
+          <div className="card" style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: '#9a9080' }}>
+            No companies in this category yet.
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '14px' }}>
             {companies.map(c => <CompanyCard key={c.id} company={c} />)}
           </div>
         )}

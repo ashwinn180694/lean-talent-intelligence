@@ -1,42 +1,72 @@
 'use client';
 
 import Link from 'next/link';
-import { ExternalLink, Globe, Linkedin } from 'lucide-react';
-import { FIT_COLORS, TIER_COLORS, fitTone } from '@/lib/market';
+import { Globe, Linkedin } from 'lucide-react';
+import { fitTone } from '@/lib/market';
 import type { Company } from '@/lib/types';
+
+const FIT_STYLES: Record<string, { bg: string; color: string }> = {
+  high:    { bg: '#f0fdf4', color: '#15803d' },
+  mid:     { bg: '#fffbeb', color: '#b45309' },
+  low:     { bg: '#fef2f2', color: '#dc2626' },
+  neutral: { bg: '#f0ede8', color: '#9a9080' }
+};
+
+const TIER_STYLES: Record<string, { bg: string; color: string }> = {
+  'Tier 1': { bg: '#fef7ed', color: '#c47e3a' },
+  'Tier 2': { bg: '#eff6ff', color: '#2563eb' },
+  'Tier 3': { bg: '#f8f7f4', color: '#9a9080' }
+};
 
 export default function CompanyCard({ company }: { company: Company }) {
   const fitKey = fitTone(company.lean_fit_score);
+  const fitStyle = FIT_STYLES[fitKey];
+  const tierStyle = company.priority_tier ? TIER_STYLES[company.priority_tier] : null;
 
   return (
     <Link
       href={`/companies/${company.id}`}
-      className="card p-4 flex flex-col gap-3 hover:border-brand/30 hover:shadow-md transition group"
+      style={{
+        display: 'flex', flexDirection: 'column', gap: '10px',
+        background: '#fff', border: '1px solid #e8e6e0', borderRadius: '10px',
+        padding: '16px', textDecoration: 'none',
+        transition: 'border-color 0.15s, box-shadow 0.15s'
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'rgba(196,126,58,0.35)';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,126,58,0.07)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = '#e8e6e0';
+        e.currentTarget.style.boxShadow = 'none';
+      }}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-slate-800 group-hover:text-brand transition leading-snug">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+        <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: '#1a1a2e', margin: 0, lineHeight: 1.35 }}>
           {company.name}
         </h3>
         {company.lean_fit_score != null && (
-          <span className={`badge shrink-0 ${FIT_COLORS[fitKey]}`}>
+          <span style={{ ...fitStyle, flexShrink: 0, borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 600 }}>
             {company.lean_fit_score}
           </span>
         )}
       </div>
 
-      {/* Meta */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* Badges */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
         {company.sub_sector && (
-          <span className="badge bg-slate-100 text-slate-600">{company.sub_sector}</span>
+          <span style={{ background: '#f0ede8', color: '#7a7068', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
+            {company.sub_sector}
+          </span>
         )}
-        {company.priority_tier && (
-          <span className={`badge ${TIER_COLORS[company.priority_tier] ?? 'bg-slate-100 text-slate-600'}`}>
+        {company.priority_tier && tierStyle && (
+          <span style={{ ...tierStyle, borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
             {company.priority_tier}
           </span>
         )}
         {(company.country || company.region) && (
-          <span className="badge bg-slate-100 text-slate-500">
+          <span style={{ background: '#f0ede8', color: '#9a9080', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
             {company.country || company.region}
           </span>
         )}
@@ -44,23 +74,25 @@ export default function CompanyCard({ company }: { company: Company }) {
 
       {/* Rationale */}
       {company.rationale && (
-        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+        <p style={{ fontSize: '12px', color: '#9a9080', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {company.rationale}
         </p>
       )}
 
       {/* Links */}
       {(company.website_url || company.linkedin_company_url) && (
-        <div className="mt-auto flex items-center gap-3 pt-1 border-t border-slate-100">
+        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '10px', borderTop: '1px solid #f0ede8' }}>
           {company.website_url && (
             <a
               href={company.website_url}
               target="_blank"
               rel="noreferrer"
               onClick={e => e.stopPropagation()}
-              className="flex items-center gap-1 text-xs text-slate-400 hover:text-brand transition"
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#b8b4aa', textDecoration: 'none', transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#c47e3a')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#b8b4aa')}
             >
-              <Globe size={12} /> Website
+              <Globe size={11} /> Website
             </a>
           )}
           {company.linkedin_company_url && (
@@ -69,9 +101,11 @@ export default function CompanyCard({ company }: { company: Company }) {
               target="_blank"
               rel="noreferrer"
               onClick={e => e.stopPropagation()}
-              className="flex items-center gap-1 text-xs text-slate-400 hover:text-brand transition"
+              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#b8b4aa', textDecoration: 'none', transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#c47e3a')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#b8b4aa')}
             >
-              <Linkedin size={12} /> LinkedIn
+              <Linkedin size={11} /> LinkedIn
             </a>
           )}
         </div>

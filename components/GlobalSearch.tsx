@@ -137,46 +137,59 @@ export default function GlobalSearch() {
   return (
     <>
       {/* Trigger bar */}
-      <div className="sticky top-0 z-10 border-b border-slate-100 bg-white/90 backdrop-blur-sm px-6 py-2.5">
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, borderBottom: '1px solid #e8e6e0', background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', padding: '10px 24px' }}>
         <button
           onClick={() => setOpen(true)}
-          className="flex w-full max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400 hover:border-brand/40 transition"
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            width: '100%', maxWidth: '380px',
+            border: '1px solid #e8e6e0', borderRadius: '8px',
+            background: '#f0ede8', padding: '7px 12px',
+            fontSize: '13px', color: '#9a9080',
+            cursor: 'pointer', fontFamily: 'inherit', transition: 'border-color 0.15s'
+          }}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = '#c47e3a')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = '#e8e6e0')}
         >
-          <Search size={14} />
-          <span className="flex-1 text-left">Search companies, candidates…</span>
-          <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">⌘K</kbd>
+          <Search size={13} />
+          <span style={{ flex: 1, textAlign: 'left' }}>Search companies…</span>
+          <kbd style={{
+            display: 'inline-flex', alignItems: 'center', borderRadius: '5px',
+            border: '1px solid #e8e6e0', background: '#fff',
+            padding: '1px 6px', fontSize: '10px', color: '#9a9080', fontFamily: 'inherit'
+          }}>⌘K</kbd>
         </button>
       </div>
 
       {/* Modal */}
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 backdrop-blur-sm pt-16 px-4"
+          style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', background: 'rgba(26,26,46,0.45)', backdropFilter: 'blur(4px)', paddingTop: '72px', paddingLeft: '16px', paddingRight: '16px' }}
           onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}
         >
-          <div className="card w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
-              <Search size={16} className="text-slate-400 shrink-0" />
+          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e8e6e0', width: '100%', maxWidth: '520px', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid #f0ede8', padding: '12px 16px' }}>
+              <Search size={15} style={{ color: '#b8b4aa', flexShrink: 0 }} />
               <input
                 ref={inputRef}
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="Search Plaid, Payments, function area…"
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+                placeholder="Search Plaid, Payments, UAE…"
+                style={{ flex: 1, background: 'transparent', fontSize: '14px', color: '#1a1a2e', border: 'none', outline: 'none', fontFamily: 'inherit' }}
               />
-              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <X size={16} />
+              <button onClick={() => setOpen(false)} style={{ color: '#b8b4aa', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}>
+                <X size={15} />
               </button>
             </div>
 
-            <div className="max-h-80 overflow-y-auto p-2">
+            <div style={{ maxHeight: '340px', overflowY: 'auto', padding: '6px' }}>
               {query.trim().length < 2 && (
-                <p className="px-3 py-6 text-center text-sm text-slate-400">
+                <p style={{ padding: '24px 12px', textAlign: 'center', fontSize: '13px', color: '#b8b4aa' }}>
                   Type at least 2 characters…
                 </p>
               )}
               {query.trim().length >= 2 && hits.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-slate-400">
+                <p style={{ padding: '24px 12px', textAlign: 'center', fontSize: '13px', color: '#b8b4aa' }}>
                   {loading ? 'Loading…' : 'No results found.'}
                 </p>
               )}
@@ -185,16 +198,18 @@ export default function GlobalSearch() {
                   key={hit.id}
                   href={hit.href}
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-slate-50 transition"
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', borderRadius: '8px', padding: '9px 10px', textDecoration: 'none', transition: 'background 0.1s' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#f8f7f4')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500">
+                  <span style={{ display: 'flex', width: '28px', height: '28px', flexShrink: 0, alignItems: 'center', justifyContent: 'center', borderRadius: '7px', background: '#f0ede8', color: '#9a9080' }}>
                     {kindIcon(hit.kind)}
                   </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-800">{hit.title}</p>
-                    <p className="truncate text-xs text-slate-400">{hit.sub}</p>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.title}</p>
+                    <p style={{ margin: 0, fontSize: '11.5px', color: '#9a9080', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.sub}</p>
                   </div>
-                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                  <span style={{ flexShrink: 0, borderRadius: '99px', background: '#f0ede8', padding: '2px 8px', fontSize: '10px', color: '#9a9080' }}>
                     {hit.kind}
                   </span>
                 </Link>

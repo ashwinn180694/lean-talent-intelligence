@@ -10,14 +10,21 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#0F4C81',
-          light: '#1A6DB5',
-          dark: '#0A3460'
+          DEFAULT: '#c47e3a',
+          light: '#d4924e',
+          dark: '#a86828'
         },
-        surface: {
-          DEFAULT: '#FFFFFF',
-          muted: '#F8FAFC',
-          border: '#E2E8F0'
+        navy: {
+          DEFAULT: '#1a1a2e',
+          light: '#232340',
+          muted: '#a09cb8'
+        },
+        warm: {
+          bg: '#f8f7f4',
+          card: '#ffffff',
+          border: '#e8e6e0',
+          muted: '#9a9080',
+          cream: '#f0ede8'
         }
       },
       fontFamily: {

@@ -17,36 +17,52 @@ export default async function CategoriesPage() {
 
   return (
     <AppShell>
-      <div className="p-6 space-y-5">
+      <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-1">Market map</p>
-          <h1 className="text-2xl font-bold text-slate-900">Categories</h1>
-          <p className="mt-1 text-sm text-slate-500">{groups.length} active categories across {companies.length} companies.</p>
+          <p style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.09em', textTransform: 'uppercase', color: '#c47e3a', marginBottom: '4px' }}>Market map</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#1a1a2e', margin: 0 }}>Categories</h1>
+          <p style={{ marginTop: '4px', fontSize: '13px', color: '#9a9080' }}>{groups.length} active categories across {companies.length} companies.</p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
           {groups.map(({ name, companies: rows }) => {
             const preview = topCompanies(rows, 4);
             return (
               <Link
                 key={name}
                 href={`/categories/${encodeURIComponent(name)}`}
-                className="card p-5 hover:border-brand/30 hover:shadow-md transition group"
+                style={{
+                  display: 'block', background: '#fff', border: '1px solid #e8e6e0',
+                  borderRadius: '10px', padding: '18px', textDecoration: 'none',
+                  transition: 'border-color 0.15s, box-shadow 0.15s'
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(196,126,58,0.4)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(196,126,58,0.08)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = '#e8e6e0';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <h2 className="text-sm font-semibold text-slate-800 group-hover:text-brand transition">{name}</h2>
-                  <span className="badge bg-brand/10 text-brand">{rows.length}</span>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#1a1a2e', margin: 0 }}>{name}</h2>
+                  <span style={{ background: 'rgba(196,126,58,0.1)', color: '#c47e3a', borderRadius: '99px', padding: '1px 8px', fontSize: '11px', fontWeight: 500 }}>{rows.length}</span>
                 </div>
-                <div className="flex gap-4 text-xs text-slate-500 mb-3">
-                  <span>Avg fit <strong className="text-slate-700">{avgFit(rows) || '—'}</strong></span>
-                  <span>Tier 1 <strong className="text-slate-700">{tierOneCount(rows)}</strong></span>
+                <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#9a9080', marginBottom: '12px' }}>
+                  <span>Avg fit <strong style={{ color: '#5a5650' }}>{avgFit(rows) || '—'}</strong></span>
+                  <span>Tier 1 <strong style={{ color: '#5a5650' }}>{tierOneCount(rows)}</strong></span>
                 </div>
-                <div className="space-y-1">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {preview.map(c => (
-                    <div key={c.id} className="text-xs text-slate-500 bg-slate-50 rounded px-2 py-0.5 truncate">{c.name}</div>
+                    <div key={c.id} style={{ fontSize: '11.5px', color: '#9a9080', background: '#f8f7f4', borderRadius: '5px', padding: '3px 8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {c.name}
+                    </div>
                   ))}
                   {rows.length > 4 && (
-                    <div className="flex items-center gap-1 text-xs text-brand">+{rows.length - 4} more <ArrowRight size={10} /></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#c47e3a' }}>
+                      +{rows.length - 4} more <ArrowRight size={10} />
+                    </div>
                   )}
                 </div>
               </Link>
