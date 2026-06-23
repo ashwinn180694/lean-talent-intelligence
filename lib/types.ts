@@ -17,7 +17,6 @@ export type Company = {
   source?: string | null;
   source_url?: string | null;
   data_sources?: string[] | null;
-  source_profile_url?: string | null;
   awesomefintech_categories?: string | null;
   awesomefintech_rank?: string | null;
   updated_at?: string | null;
@@ -35,23 +34,13 @@ export type Candidate = {
   seniority: string | null;
   linkedin_url: string | null;
   status: string | null;
-  owner_id?: string | null;
   owner_email: string | null;
   notes?: string | null;
   cv_summary?: string | null;
-  parsed_cv_text?: string | null;
   relationship_score?: number | null;
-  relationship_notes?: string | null;
-  last_interaction_at?: string | null;
-  next_follow_up_at?: string | null;
   warmth_level?: string | null;
-  previous_company?: string | null;
-  skills?: string[] | null;
   tags?: string[] | null;
-  languages?: string[] | null;
-  education?: any[] | null;
-  ashby_candidate_id?: string | null;
-  ashby_last_synced_at?: string | null;
+  next_follow_up_at?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -64,11 +53,8 @@ export type CompanyNote = {
   created_at: string;
 };
 
-export type ActivityFeedItem = {
+export type TalentPool = {
   id: string;
-  actor_email: string | null;
-  action: string;
-  entity_type: string | null;
-  entity_name: string | null;
-  created_at: string;
+  name: string;
+  description: string | null;
 };

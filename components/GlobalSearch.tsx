@@ -1,159 +1,208 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Building2, Search, Tags, UserRound, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 
-type SearchResult = {
+type Hit = {
   id: string;
-  type: 'Company' | 'Candidate' | 'Talent Pool';
+  kind: 'Company' | 'Candidate' | 'Pool';
   title: string;
-  subtitle: string;
+  sub: string;
   href: string;
 };
 
-const cacheKeys = {
-  companies: 'lean_global_search_companies_v1',
-  candidates: 'lean_global_search_candidates_v1',
-  pools: 'lean_global_search_pools_v1'
-};
-
-function iconFor(type: SearchResult['type']) {
-  if (type === 'Company') return <Building2 size={16} />;
-  if (type === 'Candidate') return <UserRound size={16} />;
-  return <Tags size={16} />;
-}
+const SEARCH_CACHE = 'lean_search_index_v1';
 
 export default function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [candidates, setCandidates] = useState<any[]>([]);
-  const [pools, setPools] = useState<any[]>([]);
+  const [index, setIndex] = useState<{ companies: any[]; candidates: any[]; pools: any[] }>({
+    companies: [],
+    candidates: [],
+    pools: []
+  });
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Load search index once (lazy — only when search is first opened)
   useEffect(() => {
+    if (!open) return;
     try {
-      const cachedCompanies = sessionStorage.getItem(cacheKeys.companies) || localStorage.getItem(cacheKeys.companies);
-      const cachedCandidates = sessionStorage.getItem(cacheKeys.candidates) || localStorage.getItem(cacheKeys.candidates);
-      const cachedPools = sessionStorage.getItem(cacheKeys.pools) || localStorage.getItem(cacheKeys.pools);
-      if (cachedCompanies) setCompanies(JSON.parse(cachedCompanies));
-      if (cachedCandidates) setCandidates(JSON.parse(cachedCandidates));
-      if (cachedPools) setPools(JSON.parse(cachedPools));
+      const cached = sessionStorage.getItem(SEARCH_CACHE) ?? localStorage.getItem(SEARCH_CACHE);
+      if (cached) { setIndex(JSON.parse(cached)); return; }
     } catch {}
 
     async function load() {
       setLoading(true);
-      const [{ data: companyRows }, { data: candidateRows }, { data: poolRows }] = await Promise.all([
-        supabase.from('companies').select('id,name,sub_sector,region,country,priority_tier,lean_fit_score').order('name').limit(1200),
-        supabase.from('candidates_view').select('id,full_name,title,company_name,function_area,status,owner_email,warmth_level,next_follow_up_at,relationship_notes,tags').order('updated_at', { ascending: false }).limit(1200),
-        supabase.from('talent_pools').select('id,name,description').order('name').limit(300)
+      const [{ data: companies }, { data: candidates }, { data: pools }] = await Promise.all([
+        supabase
+          .from('companies')
+          .select('id,name,sub_sector,region,country,lean_fit_score,priority_tier')
+          .order('name')
+          .limit(1200),
+        supabase
+          .from('candidates_view')
+          .select('id,full_name,title,company_name,function_area,status,owner_email,tags')
+          .order('updated_at', { ascending: false })
+          .limit(600),
+        supabase.from('talent_pools').select('id,name,description').order('name').limit(200)
       ]);
-      if (companyRows) {
-        setCompanies(companyRows);
-        try { const serialized = JSON.stringify(companyRows); sessionStorage.setItem(cacheKeys.companies, serialized); localStorage.setItem(cacheKeys.companies, serialized); } catch {}
-      }
-      if (candidateRows) {
-        setCandidates(candidateRows);
-        try { const serialized = JSON.stringify(candidateRows); sessionStorage.setItem(cacheKeys.candidates, serialized); localStorage.setItem(cacheKeys.candidates, serialized); } catch {}
-      }
-      if (poolRows) {
-        setPools(poolRows);
-        try { const serialized = JSON.stringify(poolRows); sessionStorage.setItem(cacheKeys.pools, serialized); localStorage.setItem(cacheKeys.pools, serialized); } catch {}
-      }
+      const next = { companies: companies || [], candidates: candidates || [], pools: pools || [] };
+      setIndex(next);
+      try {
+        const s = JSON.stringify(next);
+        sessionStorage.setItem(SEARCH_CACHE, s);
+        localStorage.setItem(SEARCH_CACHE, s);
+      } catch {}
       setLoading(false);
     }
     load();
-  }, []);
-
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const isMac = navigator.platform.toLowerCase().includes('mac');
-      if ((isMac ? event.metaKey : event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setOpen(true);
-      }
-      if (event.key === 'Escape') setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
 
-  const results = useMemo<SearchResult[]>(() => {
+  // ⌘K / Ctrl+K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mac = navigator.platform.toLowerCase().includes('mac');
+      if ((mac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setOpen(v => !v);
+      }
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 40);
+    else setQuery('');
+  }, [open]);
+
+  const hits = useMemo<Hit[]>(() => {
     const q = query.trim().toLowerCase();
     if (q.length < 2) return [];
-    const companyResults = companies
-      .filter(c => `${c.name} ${c.sub_sector || ''} ${c.region || ''} ${c.country || ''} ${c.priority_tier || ''}`.toLowerCase().includes(q))
+
+    const companyHits = index.companies
+      .filter(c =>
+        `${c.name} ${c.sub_sector} ${c.region} ${c.country} ${c.priority_tier}`
+          .toLowerCase()
+          .includes(q)
+      )
       .slice(0, 8)
       .map(c => ({
-        id: `company-${c.id}`,
-        type: 'Company' as const,
+        id: `c-${c.id}`,
+        kind: 'Company' as const,
         title: c.name,
-        subtitle: `${c.sub_sector || 'Company'} · ${c.region || c.country || 'Global'}${c.lean_fit_score ? ` · Fit ${c.lean_fit_score}` : ''}`,
+        sub: `${c.sub_sector || 'Company'} · ${c.region || 'Global'}${c.lean_fit_score ? ` · Fit ${c.lean_fit_score}` : ''}`,
         href: `/companies/${c.id}`
       }));
 
-    const candidateResults = candidates
-      .filter(c => `${c.full_name} ${c.title || ''} ${c.company_name || ''} ${c.function_area || ''} ${c.status || ''} ${c.owner_email || ''} ${c.warmth_level || ''} ${c.next_follow_up_at || ''} ${c.relationship_notes || ''} ${(c.tags || []).join(' ')}`.toLowerCase().includes(q))
-      .slice(0, 8)
+    const candidateHits = index.candidates
+      .filter(c =>
+        `${c.full_name} ${c.title} ${c.company_name} ${c.function_area} ${c.status} ${(c.tags || []).join(' ')}`
+          .toLowerCase()
+          .includes(q)
+      )
+      .slice(0, 6)
       .map(c => ({
-        id: `candidate-${c.id}`,
-        type: 'Candidate' as const,
+        id: `p-${c.id}`,
+        kind: 'Candidate' as const,
         title: c.full_name,
-        subtitle: `${c.title || 'Candidate'} · ${c.company_name || 'No company'} · ${c.status || 'Mapped'}${c.next_follow_up_at ? ` · Follow-up ${c.next_follow_up_at}` : ''}`, 
+        sub: `${c.title || 'Candidate'} · ${c.company_name || 'No company'} · ${c.status || 'Mapped'}`,
         href: `/candidates/${c.id}`
       }));
 
-    const poolResults = pools
-      .filter(p => `${p.name} ${p.description || ''}`.toLowerCase().includes(q))
-      .slice(0, 6)
+    const poolHits = index.pools
+      .filter(p => `${p.name} ${p.description}`.toLowerCase().includes(q))
+      .slice(0, 4)
       .map(p => ({
         id: `pool-${p.id}`,
-        type: 'Talent Pool' as const,
+        kind: 'Pool' as const,
         title: p.name,
-        subtitle: p.description || 'Talent pool',
+        sub: p.description || 'Talent pool',
         href: '/talent-pools'
       }));
 
-    return [...companyResults, ...candidateResults, ...poolResults].slice(0, 18);
-  }, [companies, candidates, pools, query]);
+    return [...companyHits, ...candidateHits, ...poolHits].slice(0, 18);
+  }, [query, index]);
 
-  return <>
-    <div className="global-search-bar">
-      <button className="global-search-trigger" type="button" onClick={() => setOpen(true)}>
-        <Search size={16}/>
-        <span>Search companies, candidates, pools...</span>
-        <kbd>⌘K</kbd>
-      </button>
-    </div>
+  const kindIcon = (kind: Hit['kind']) => {
+    if (kind === 'Company') return <Building2 size={15} />;
+    if (kind === 'Candidate') return <UserRound size={15} />;
+    return <Tags size={15} />;
+  };
 
-    {open && <div className="global-search-overlay" role="dialog" aria-modal="true">
-      <div className="global-search-modal">
-        <div className="global-search-input-wrap">
-          <Search size={18}/>
-          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search Plaid, Payments, Interested, Ashwin..." />
-          <button className="icon-btn" onClick={() => setOpen(false)} aria-label="Close"><X size={18}/></button>
-        </div>
-        <div className="global-search-body">
-          {query.trim().length < 2 && <div className="global-search-empty">Type at least 2 characters. Try a company, candidate status, function, owner, or pool.</div>}
-          {query.trim().length >= 2 && results.length === 0 && <div className="global-search-empty">{loading ? 'Loading search index...' : 'No matching records found.'}</div>}
-          {results.length > 0 && <div className="global-result-list">
-            {results.map(result => <Link key={result.id} href={result.href} className="global-result-item" onClick={() => setOpen(false)}>
-              <div className={`global-result-icon ${result.type.toLowerCase().replace(/\s+/g, '-')}`}>{iconFor(result.type)}</div>
-              <div>
-                <div className="global-result-title"><span>{result.title}</span><em>{result.type}</em></div>
-                <div className="global-result-subtitle">{result.subtitle}</div>
-              </div>
-            </Link>)}
-          </div>}
-        </div>
+  return (
+    <>
+      {/* Trigger bar */}
+      <div className="sticky top-0 z-10 border-b border-slate-100 bg-white/90 backdrop-blur-sm px-6 py-2.5">
+        <button
+          onClick={() => setOpen(true)}
+          className="flex w-full max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-400 hover:border-brand/40 transition"
+        >
+          <Search size={14} />
+          <span className="flex-1 text-left">Search companies, candidates…</span>
+          <kbd className="hidden sm:inline-flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">⌘K</kbd>
+        </button>
       </div>
-    </div>}
-  </>;
+
+      {/* Modal */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-slate-900/40 backdrop-blur-sm pt-16 px-4"
+          onClick={e => { if (e.target === e.currentTarget) setOpen(false); }}
+        >
+          <div className="card w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
+              <Search size={16} className="text-slate-400 shrink-0" />
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search Plaid, Payments, function area…"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400"
+              />
+              <button onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto p-2">
+              {query.trim().length < 2 && (
+                <p className="px-3 py-6 text-center text-sm text-slate-400">
+                  Type at least 2 characters…
+                </p>
+              )}
+              {query.trim().length >= 2 && hits.length === 0 && (
+                <p className="px-3 py-6 text-center text-sm text-slate-400">
+                  {loading ? 'Loading…' : 'No results found.'}
+                </p>
+              )}
+              {hits.map(hit => (
+                <Link
+                  key={hit.id}
+                  href={hit.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-slate-50 transition"
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500">
+                    {kindIcon(hit.kind)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-slate-800">{hit.title}</p>
+                    <p className="truncate text-xs text-slate-400">{hit.sub}</p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                    {hit.kind}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }

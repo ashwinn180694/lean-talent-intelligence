@@ -1,6 +1,11 @@
-import AppShellStatic from '@/components/AppShellStatic';
-import CompaniesPageClient from '@/components/CompaniesPageClient';
+import AppShell from '@/components/AppShell';
+import CompaniesGrid from '@/components/CompaniesGrid';
 
+// Server component: wraps the shell around the client-side grid
 export default function CompaniesPage() {
-  return <AppShellStatic><CompaniesPageClient /></AppShellStatic>;
+  return (
+    <AppShell>
+      <CompaniesGrid />
+    </AppShell>
+  );
 }

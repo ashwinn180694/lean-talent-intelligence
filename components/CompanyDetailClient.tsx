@@ -1,392 +1,317 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Pencil, Save, X, ArrowLeft, Plus, UserPlus, Users } from 'lucide-react';
+import {
+  ArrowLeft, CheckCircle2, ExternalLink, Globe, Linkedin, Loader2, Save, Trash2, X
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
-import type { Candidate, Company, CompanyNote } from '@/lib/types';
+import { writeCompanyCache, readCompanyCache, clearCompanyCache } from '@/lib/cache';
+import { cleanUrl, FIT_COLORS, fitTone, MARKET_CATEGORIES, PRIORITY_TIERS, TIER_COLORS } from '@/lib/market';
+import type { Company } from '@/lib/types';
 
-const STATUSES = ['Mapped', 'Contacted', 'Replied', 'Interested', 'Interviewing', 'Offer', 'Hired', 'Rejected'];
-const FUNCTIONS = ['Product', 'Engineering', 'Partnerships', 'Commercial', 'Operations', 'Compliance', 'Risk', 'Design', 'Data'];
+type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 
-function normalizeUrl(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
-
-function emptyCandidate(companyId: string, ownerEmail: string) {
-  return {
-    full_name: '',
-    title: '',
-    company_id: companyId,
-    location: '',
-    function_area: 'Product',
-    seniority: 'Senior',
-    linkedin_url: '',
-    status: 'Mapped',
-    owner_email: ownerEmail,
-    notes: ''
-  };
-}
-
-type Props = {
-  company?: Company | null;
-  companyId?: string;
-  candidates?: Candidate[];
-  notes?: CompanyNote[];
-  userEmail?: string;
-};
-
-export default function CompanyDetailClient({ company = null, companyId, candidates = [], notes = [], userEmail = '' }: Props) {
-  const initialId = company?.id || companyId || '';
-  const [current, setCurrent] = useState<Company | null>(company);
-  const [companyCandidates, setCompanyCandidates] = useState<Candidate[]>(candidates || []);
-  const [companyNotes, setCompanyNotes] = useState<CompanyNote[]>(notes || []);
-  const [resolvedUserEmail, setResolvedUserEmail] = useState(userEmail || '');
-  const [editing, setEditing] = useState(false);
-  const [website, setWebsite] = useState(company?.website_url || '');
-  const [linkedin, setLinkedin] = useState(company?.linkedin_company_url || '');
-  const [fitScore, setFitScore] = useState(company?.lean_fit_score ? String(company.lean_fit_score) : '');
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(!company);
-  const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
-  const [showCandidateForm, setShowCandidateForm] = useState(false);
-  const [candidateForm, setCandidateForm] = useState(emptyCandidate(initialId, userEmail));
-  const [newNote, setNewNote] = useState('');
-  const [showNoteForm, setShowNoteForm] = useState(false);
-  const [addingNote, setAddingNote] = useState(false);
-  const [drilldown, setDrilldown] = useState<{ title: string; subtitle?: string; rows: Candidate[] } | null>(null);
+export default function CompanyDetailClient({ companyId }: { companyId: string }) {
+  const [company, setCompany] = useState<Company | null>(null);
+  const [draft, setDraft] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const [saveMsg, setSaveMsg] = useState('');
+  const [pendingDelete, setPendingDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const id = company?.id || companyId;
-    if (!id) return;
-    let active = true;
+    async function load() {
+      // Try cache first
+      const cache = readCompanyCache<Company>();
+      const cached = cache?.find(c => c.id === companyId);
+      if (cached) { setCompany(cached); setDraft(cached); setLoading(false); }
 
-    async function loadCompany() {
-      setError('');
-      try {
-        const cached = sessionStorage.getItem(`lean_company_${id}`);
-        if (!company && cached) {
-          const parsed = JSON.parse(cached) as Company;
-          if (active) {
-            setCurrent(parsed);
-            setWebsite(parsed.website_url || '');
-            setLinkedin(parsed.linkedin_company_url || '');
-            setFitScore(parsed.lean_fit_score ? String(parsed.lean_fit_score) : '');
-            setLoading(false);
-          }
-        }
-      } catch {}
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (active && sessionData.session?.user?.email) {
-        setResolvedUserEmail(sessionData.session.user.email);
-        setCandidateForm(prev => ({ ...prev, owner_email: sessionData.session?.user?.email || prev.owner_email }));
+      const { data } = await supabase.from('companies').select('*').eq('id', companyId).single();
+      if (data) {
+        setCompany(data as Company);
+        setDraft(data as Company);
+        // Update cache
+        const all = readCompanyCache<Company>() || [];
+        const updated = all.map(c => c.id === companyId ? (data as Company) : c);
+        writeCompanyCache(updated);
       }
-
-      const [{ data: freshCompany, error: companyError }, { data: freshCandidates }, { data: freshNotes }] = await Promise.all([
-        supabase.from('companies').select('*').eq('id', id).single(),
-        supabase.from('candidates_view').select('*').eq('company_id', id).order('created_at', { ascending: false }),
-        supabase.from('company_notes').select('*').eq('company_id', id).order('created_at', { ascending: false })
-      ]);
-
-      if (!active) return;
-      if (companyError) {
-        setError(companyError.message);
-        setLoading(false);
-        return;
-      }
-      if (freshCompany) {
-        const next = freshCompany as Company;
-        setCurrent(next);
-        setWebsite(next.website_url || '');
-        setLinkedin(next.linkedin_company_url || '');
-        setFitScore(next.lean_fit_score ? String(next.lean_fit_score) : '');
-        try { sessionStorage.setItem(`lean_company_${id}`, JSON.stringify(next)); } catch {}
-      }
-      setCompanyCandidates((freshCandidates || []) as Candidate[]);
-      setCompanyNotes((freshNotes || []) as CompanyNote[]);
       setLoading(false);
     }
+    load();
+  }, [companyId]);
 
-    loadCompany();
-    return () => { active = false; };
-  }, [company?.id, companyId]);
-
-  const functionBreakdown = useMemo(() => {
-    const counts = new Map<string, number>();
-    companyCandidates.forEach(c => counts.set(c.function_area || 'Unassigned', (counts.get(c.function_area || 'Unassigned') || 0) + 1));
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-  }, [companyCandidates]);
-
-  const statusCounts = useMemo(() => STATUSES.map(status => ({ status, count: companyCandidates.filter(c => c.status === status).length })), [companyCandidates]);
-
-  async function logActivity(action: string, entityType: string, entityName: string) {
-    await supabase.from('activity_feed').insert({ actor_email: resolvedUserEmail || null, action, entity_type: entityType, entity_name: entityName });
+  function updateDraft<K extends keyof Company>(field: K, value: Company[K]) {
+    setDraft(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, [field]: value };
+      scheduleAutosave(next);
+      return next;
+    });
   }
 
-  async function saveCompanyDetails(e: React.FormEvent) {
-    e.preventDefault();
-    if (!current) return;
-    const score = fitScore.trim() ? Number(fitScore) : null;
-    if (score !== null && (Number.isNaN(score) || score < 1 || score > 10)) {
-      setError('Fit score must be between 1 and 10.');
-      return;
-    }
-    setSaving(true);
-    setError('');
-    setMessage('');
+  function scheduleAutosave(next: Company) {
+    setSaveState('saving');
+    setSaveMsg('Saving…');
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => persistCompany(next), 700);
+  }
+
+  async function persistCompany(c: Company) {
+    setSaveState('saving');
+    setSaveMsg('Saving to Supabase…');
     const updates = {
-      website_url: normalizeUrl(website),
-      linkedin_company_url: normalizeUrl(linkedin),
-      lean_fit_score: score,
+      name: c.name?.trim() || 'Untitled',
+      sector: c.sector || 'FinTech',
+      sub_sector: c.sub_sector || null,
+      region: c.region || null,
+      country: c.country || null,
+      hq: c.hq || null,
+      website_url: c.website_url ? cleanUrl(String(c.website_url)) : null,
+      linkedin_company_url: c.linkedin_company_url ? cleanUrl(String(c.linkedin_company_url)) : null,
+      lean_fit_score: c.lean_fit_score != null && String(c.lean_fit_score).trim() !== '' ? Number(c.lean_fit_score) : null,
+      priority_tier: c.priority_tier || null,
+      recommended_functions: c.recommended_functions || null,
+      rationale: c.rationale || null,
       updated_at: new Date().toISOString()
     };
-    const { data, error } = await supabase
-      .from('companies')
-      .update(updates)
-      .eq('id', current.id)
-      .select('*')
-      .single();
-    setSaving(false);
-    if (error) {
-      setError(error.message);
+    const { data, error } = await supabase.from('companies').update(updates).eq('id', c.id).select('*').single();
+    if (error || !data) {
+      setSaveState('error');
+      setSaveMsg(error?.message || 'Save failed');
       return;
     }
-    const next = data as Company;
-    setCurrent(next);
-    setWebsite(next.website_url || '');
-    setLinkedin(next.linkedin_company_url || '');
-    setFitScore(next.lean_fit_score ? String(next.lean_fit_score) : '');
-    try { sessionStorage.setItem(`lean_company_${next.id}`, JSON.stringify(next)); } catch {}
-    setEditing(false);
-    setMessage('Company details updated.');
-    logActivity('updated company details', 'company', next.name);
+    const saved = data as Company;
+    setCompany(saved);
+    setDraft(saved);
+    // Update cache
+    const all = readCompanyCache<Company>() || [];
+    writeCompanyCache(all.map(x => x.id === saved.id ? saved : x));
+    setSaveState('saved');
+    setSaveMsg('Saved');
+    setTimeout(() => setSaveState('idle'), 1500);
   }
 
-  async function addCandidate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!current) return;
-    setError('');
-    setMessage('');
-    if (!candidateForm.full_name.trim()) {
-      setError('Candidate name is required.');
-      return;
-    }
-    const payload = {
-      ...candidateForm,
-      company_id: current.id,
-      full_name: candidateForm.full_name.trim(),
-      title: candidateForm.title.trim() || null,
-      location: candidateForm.location.trim() || null,
-      linkedin_url: normalizeUrl(candidateForm.linkedin_url),
-      notes: candidateForm.notes.trim() || null,
-      owner_email: candidateForm.owner_email.trim() || resolvedUserEmail || null
-    };
-    const { data, error } = await supabase.from('candidates').insert(payload).select('*').single();
-    if (error) {
-      setError(error.message);
-      return;
-    }
-    const candidate = { ...(data as Candidate), company_name: current.name };
-    setCompanyCandidates(prev => [candidate, ...prev]);
-    setCandidateForm(emptyCandidate(current.id, resolvedUserEmail));
-    setShowCandidateForm(false);
-    setMessage('Candidate added to this company.');
-    logActivity('added candidate', 'candidate', candidate.full_name);
+  async function deleteCompany() {
+    if (!draft) return;
+    setDeleting(true);
+    setDeleteError('');
+    await supabase.from('candidates').update({ company_id: null }).eq('company_id', draft.id);
+    const { error } = await supabase.from('companies').delete().eq('id', draft.id);
+    setDeleting(false);
+    if (error) { setDeleteError(error.message); return; }
+    clearCompanyCache();
+    window.location.href = '/companies';
   }
 
-  async function addNote(e: React.FormEvent) {
-    e.preventDefault();
-    if (!current || !newNote.trim()) return;
-    setAddingNote(true);
-    setError('');
-    const { data, error } = await supabase.from('company_notes').insert({ company_id: current.id, note: newNote.trim(), owner_email: resolvedUserEmail || null }).select('*').single();
-    setAddingNote(false);
-    if (error) {
-      setError(error.message);
-      return;
-    }
-    setCompanyNotes(prev => [data as CompanyNote, ...prev]);
-    setNewNote('');
-    setShowNoteForm(false);
-    logActivity('added company note', 'company', current.name);
-  }
-
-  function openCandidateDrilldown(title: string, rows: Candidate[], subtitle?: string) {
-    setDrilldown({ title, rows, subtitle });
-  }
-
-  function candidateMiniCard(c: Candidate) {
-    return <div key={c.id} className="mini-record-card">
-      <div>
-        <Link className="table-link" href={`/candidates/${c.id}`}>{c.full_name}</Link>
-        <div className="muted">{c.title || 'No title'} · {c.function_area || 'Unassigned'}</div>
-        <div className="muted">Owner: {c.owner_email || 'Unassigned'} · Status: {c.status || 'Mapped'}</div>
-      </div>
-      <div className="actions">
-        {c.linkedin_url && <a className="btn secondary" href={c.linkedin_url} target="_blank" rel="noreferrer">LinkedIn <ExternalLink size={13}/></a>}
-        <Link className="btn secondary" href={`/candidates/${c.id}`}>Open profile</Link>
-      </div>
-    </div>;
-  }
-
-  if (loading && !current) {
-    return <div className="grid" style={{ gap: 18 }}>
-      <div className="breadcrumb"><Link href="/dashboard">Home</Link><span>/</span><Link href="/companies">Companies</Link><span>/</span><strong>Loading...</strong></div>
-      <div className="card skeleton-card"><div className="skeleton-line wide"></div><div className="skeleton-line"></div><div className="skeleton-line short"></div></div>
-      <div className="grid grid-4"><div className="card skeleton-card"></div><div className="card skeleton-card"></div><div className="card skeleton-card"></div><div className="card skeleton-card"></div></div>
-    </div>;
-  }
-
-  if (!current) {
-    return <div className="card"><h1>Company not found</h1><p className="muted">Return to Companies and try again.</p><Link href="/companies" className="btn secondary">Back to Companies</Link></div>;
-  }
-
-  return <div className="grid detail-page" style={{ gap: 18 }}>
-    <div className="breadcrumb">
-      <Link href="/dashboard">Home</Link><span>/</span><Link href="/companies">Companies</Link><span>/</span><strong>{current.name}</strong>
-    </div>
-    <Link href="/companies" className="back-link"><ArrowLeft size={16}/> Back to Companies</Link>
-    <div className="card company-hero">
-      <div>
-        <div className="muted">Company profile</div>
-        <h1 className="h1">{current.name}</h1>
-        <div className="toolbar" style={{ marginBottom: 0 }}>
-          <span className={`pill ${(current.priority_tier || '').replace(' ', '').toLowerCase()}`}>{current.priority_tier || 'Unassigned'}</span>
-          <span className="pill">Fit {current.lean_fit_score || '-'}</span>
-          <span className="pill">{current.sub_sector || current.sector || 'Fintech'}</span>
+  if (loading) {
+    return (
+      <div className="p-6 space-y-4">
+        <div className="h-6 w-48 bg-slate-100 animate-pulse rounded" />
+        <div className="card p-6 space-y-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-4 bg-slate-100 animate-pulse rounded w-full" />
+          ))}
         </div>
       </div>
-      <div className="actions">
-        <button className="btn secondary" onClick={() => setShowCandidateForm(true)}><UserPlus size={14}/> Add Candidate</button>
-        <button className="btn" onClick={() => setEditing(true)}><Pencil size={14}/> Edit company</button>
-      </div>
-    </div>
+    );
+  }
 
-    {message && <div className="success">{message}</div>}
-    {error && <div className="error">{error}</div>}
-
-    <div className="grid grid-4">
-      <button className="card metric-card" onClick={() => openCandidateDrilldown('All candidates', companyCandidates, current.name)}><div className="muted">Candidates</div><div className="stat">{companyCandidates.length}</div><span className="metric-hint">Click to view</span></button>
-      <button className="card metric-card" onClick={() => openCandidateDrilldown('Contacted candidates', companyCandidates.filter(c => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(c.status || '')), current.name)}><div className="muted">Contacted</div><div className="stat">{companyCandidates.filter(c => ['Contacted','Replied','Interested','Interviewing','Offer','Hired'].includes(c.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
-      <button className="card metric-card" onClick={() => openCandidateDrilldown('Interested+ candidates', companyCandidates.filter(c => ['Interested','Interviewing','Offer','Hired'].includes(c.status || '')), current.name)}><div className="muted">Interested+</div><div className="stat">{companyCandidates.filter(c => ['Interested','Interviewing','Offer','Hired'].includes(c.status || '')).length}</div><span className="metric-hint">Click to view</span></button>
-      <div className="card"><div className="muted">Region</div><strong>{current.region || '-'}</strong><p className="muted">{current.country || current.hq || ''}</p></div>
-    </div>
-
-    <div className="card">
-      <h2>Candidate coverage</h2>
-      {functionBreakdown.length ? <div className="coverage-list">
-        {functionBreakdown.map(([fn, count]) => <button key={fn} className="coverage-row coverage-button" onClick={() => openCandidateDrilldown(`${fn} candidates`, companyCandidates.filter(c => (c.function_area || 'Unassigned') === fn), current.name)}><span>{fn}</span><strong>{count}</strong></button>)}
-      </div> : <p className="muted">No candidates mapped yet. Use Add Candidate to start building this company map.</p>}
-      <div className="pipeline" style={{ marginTop: 16 }}>
-        {statusCounts.map(({ status, count }) => <button key={status} className="pipeline-step pipeline-button" onClick={() => openCandidateDrilldown(`${status} candidates`, companyCandidates.filter(c => c.status === status), current.name)}><span>{status}</span><strong>{count}</strong></button>)}
-      </div>
-    </div>
-
-    <div className="card">
-      <div className="modal-header">
-        <div><h2>Company details</h2><p className="muted">Review key source links and fit score.</p></div>
-        <button className="btn secondary" onClick={() => setEditing(true)}><Pencil size={14}/> Edit details</button>
-      </div>
-      <div className="company-detail-grid">
-        <div><div className="muted">Fit score</div><strong>{current.lean_fit_score || '-'}</strong></div>
-        <div><div className="muted">Website</div>{current.website_url ? <a href={current.website_url} target="_blank" rel="noreferrer">Open Website <ExternalLink size={14}/></a> : <span className="muted">Missing</span>}</div>
-        <div><div className="muted">LinkedIn</div>{current.linkedin_company_url ? <a href={current.linkedin_company_url} target="_blank" rel="noreferrer">Open LinkedIn <ExternalLink size={14}/></a> : <span className="muted">Missing</span>}</div>
-      </div>
-    </div>
-
-    {showCandidateForm && <div className="modal-backdrop" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-header">
-          <div><h2>Add candidate from {current.name}</h2><p className="muted">This candidate will automatically be linked to {current.name}.</p></div>
-          <button className="icon-btn" type="button" onClick={() => setShowCandidateForm(false)} aria-label="Close"><X size={20}/></button>
+  if (!draft) {
+    return (
+      <div className="p-6">
+        <Link href="/companies" className="flex items-center gap-1.5 text-sm text-brand hover:underline mb-4">
+          <ArrowLeft size={14} /> Back to companies
+        </Link>
+        <div className="card p-12 text-center">
+          <p className="text-slate-500">Company not found.</p>
         </div>
-        <form className="grid form-grid" onSubmit={addCandidate}>
-          <label>Full name<input className="input" value={candidateForm.full_name} onChange={e => setCandidateForm({ ...candidateForm, full_name: e.target.value })} required /></label>
-          <label>Title<input className="input" value={candidateForm.title} onChange={e => setCandidateForm({ ...candidateForm, title: e.target.value })} /></label>
-          <label>Location<input className="input" value={candidateForm.location} onChange={e => setCandidateForm({ ...candidateForm, location: e.target.value })} /></label>
-          <label>Function<select className="select" value={candidateForm.function_area} onChange={e => setCandidateForm({ ...candidateForm, function_area: e.target.value })}>{FUNCTIONS.map(fn => <option key={fn}>{fn}</option>)}</select></label>
-          <label>Seniority<input className="input" value={candidateForm.seniority} onChange={e => setCandidateForm({ ...candidateForm, seniority: e.target.value })} /></label>
-          <label>Status<select className="select" value={candidateForm.status} onChange={e => setCandidateForm({ ...candidateForm, status: e.target.value })}>{STATUSES.map(s => <option key={s}>{s}</option>)}</select></label>
-          <label>Owner<input className="input" value={candidateForm.owner_email} onChange={e => setCandidateForm({ ...candidateForm, owner_email: e.target.value })} /></label>
-          <label>LinkedIn URL<input className="input" value={candidateForm.linkedin_url} onChange={e => setCandidateForm({ ...candidateForm, linkedin_url: e.target.value })} /></label>
-          <label className="full-span">Notes<textarea value={candidateForm.notes} onChange={e => setCandidateForm({ ...candidateForm, notes: e.target.value })} /></label>
-          <div className="modal-actions full-span"><button className="btn" type="submit"><Plus size={14}/> Save Candidate</button><button className="btn secondary" type="button" onClick={() => setShowCandidateForm(false)}>Cancel</button></div>
-        </form>
       </div>
-    </div>}
+    );
+  }
 
-    <div className="grid grid-3">
-      <div className="card"><h2>Sector</h2><p>{current.sector || '-'}</p><p className="muted">{current.sub_sector || ''}</p></div>
-      <div className="card"><h2>Recommended functions</h2><p>{current.recommended_functions || '-'}</p></div>
-      <div className="card"><h2>Careers</h2>{current.careers_url ? <a className="btn secondary" href={current.careers_url} target="_blank" rel="noreferrer">Open Careers <ExternalLink size={14}/></a> : <p className="muted">No careers URL added yet.</p>}</div>
-    </div>
+  const fitKey = fitTone(draft.lean_fit_score);
 
-    <div className="card">
-      <h2>Why Lean targets this company</h2>
-      <p className="muted">{current.rationale || 'No rationale added yet.'}</p>
-    </div>
+  return (
+    <div className="p-6 space-y-5">
+      {/* Back */}
+      <Link href="/companies" className="inline-flex items-center gap-1.5 text-sm text-brand hover:underline">
+        <ArrowLeft size={14} /> Back to companies
+      </Link>
 
-    <div className="card">
-      <div className="modal-header">
-        <div><h2>Company notes</h2><p className="muted">Sourcing insights, team context, and observations for future Talent Partners.</p></div>
-        <button className="btn" onClick={() => setShowNoteForm(true)}><Plus size={14}/> Add note</button>
-      </div>
-      <div className="note-list">
-        {companyNotes.length ? companyNotes.map(note => <div key={note.id} className="note-item"><p>{note.note}</p><div className="muted">{note.owner_email || 'Unknown'} · {new Date(note.created_at).toLocaleDateString()}</div></div>) : <p className="muted">No notes added yet.</p>}
-      </div>
-    </div>
-
-    {editing && <div className="modal-backdrop" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-header">
-          <div><h2>Edit company details</h2><p className="muted">Update fit score and source links without leaving the profile.</p></div>
-          <button className="icon-btn" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }} aria-label="Close"><X size={20}/></button>
-        </div>
-        <form className="grid form-grid" onSubmit={saveCompanyDetails}>
-          <label>Fit score<input className="input" type="number" min="1" max="10" value={fitScore} onChange={e => setFitScore(e.target.value)} placeholder="1-10" /></label>
-          <label>Website URL<input className="input" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://company.com" /></label>
-          <label>LinkedIn company URL<input className="input" value={linkedin} onChange={e => setLinkedin(e.target.value)} placeholder="https://www.linkedin.com/company/company-name" /></label>
-          <div className="modal-actions full-span">
-            <button className="btn" disabled={saving} type="submit"><Save size={14}/> {saving ? 'Saving...' : 'Save changes'}</button>
-            <button className="btn secondary" type="button" onClick={() => { setEditing(false); setWebsite(current.website_url || ''); setLinkedin(current.linkedin_company_url || ''); setFitScore(current.lean_fit_score ? String(current.lean_fit_score) : ''); }}><X size={14}/> Cancel</button>
+      {/* Hero card */}
+      <div className="card px-6 py-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <input
+              className="text-xl font-bold text-slate-900 bg-transparent border-b border-transparent hover:border-slate-200 focus:border-brand focus:outline-none w-full pb-0.5 transition"
+              value={draft.name || ''}
+              onChange={e => updateDraft('name', e.target.value)}
+            />
+            <p className="mt-1 text-sm text-slate-500">
+              {draft.sub_sector || 'Global Fintech'} · {draft.country || draft.region || 'Global'}
+              {draft.hq ? ` · ${draft.hq}` : ''}
+            </p>
           </div>
-        </form>
-      </div>
-    </div>}
 
-    {showNoteForm && <div className="modal-backdrop" role="dialog" aria-modal="true">
-      <div className="modal-card">
-        <div className="modal-header">
-          <div><h2>Add company note</h2><p className="muted">Capture sourcing context for {current.name}.</p></div>
-          <button className="icon-btn" type="button" onClick={() => { setShowNoteForm(false); setNewNote(''); }} aria-label="Close"><X size={20}/></button>
-        </div>
-        <form className="grid" onSubmit={addNote}>
-          <textarea value={newNote} onChange={e => setNewNote(e.target.value)} placeholder="Add sourcing notes, team insights, hiring observations, compensation notes, or anything useful for future Talent Partners..." />
-          <div className="modal-actions">
-            <button className="btn" disabled={addingNote} type="submit">{addingNote ? 'Adding...' : 'Add note'}</button>
-            <button className="btn secondary" type="button" onClick={() => { setShowNoteForm(false); setNewNote(''); }}>Cancel</button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {draft.lean_fit_score != null && (
+              <span className={`badge text-sm px-2.5 py-1 ${FIT_COLORS[fitKey]}`}>
+                Fit {draft.lean_fit_score}
+              </span>
+            )}
+            {draft.priority_tier && (
+              <span className={`badge text-sm px-2.5 py-1 ${TIER_COLORS[draft.priority_tier] ?? 'bg-slate-100 text-slate-600'}`}>
+                {draft.priority_tier}
+              </span>
+            )}
           </div>
-        </form>
-      </div>
-    </div>}
+        </div>
 
-    {drilldown && <div className="modal-backdrop" role="dialog" aria-modal="true">
-      <div className="modal-card drilldown-modal">
-        <div className="modal-header">
-          <div>
-            <h2>{drilldown.title}</h2>
-            <p className="muted">{drilldown.subtitle} · {drilldown.rows.length} record{drilldown.rows.length === 1 ? '' : 's'}</p>
+        {/* Action strip */}
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
+          {draft.website_url && (
+            <a href={draft.website_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs gap-1.5">
+              <Globe size={13} /> Website <ExternalLink size={11} />
+            </a>
+          )}
+          {draft.linkedin_company_url && (
+            <a href={draft.linkedin_company_url} target="_blank" rel="noreferrer" className="btn-secondary text-xs gap-1.5">
+              <Linkedin size={13} /> LinkedIn <ExternalLink size={11} />
+            </a>
+          )}
+          <button
+            onClick={() => draft && persistCompany(draft)}
+            disabled={saveState === 'saving'}
+            className="btn-secondary text-xs gap-1.5"
+          >
+            <Save size={13} /> Save now
+          </button>
+          <button
+            onClick={() => setPendingDelete(true)}
+            className="btn-secondary text-xs gap-1.5 text-red-600 border-red-200 hover:bg-red-50"
+          >
+            <Trash2 size={13} /> Remove
+          </button>
+
+          {/* Save indicator */}
+          <div className="ml-auto flex items-center gap-1.5 text-xs">
+            {saveState === 'saving' && <><Loader2 size={13} className="animate-spin text-slate-400" /><span className="text-slate-400">{saveMsg}</span></>}
+            {saveState === 'saved' && <><CheckCircle2 size={13} className="text-emerald-500" /><span className="text-emerald-600">{saveMsg}</span></>}
+            {saveState === 'error' && <span className="text-red-600">{saveMsg}</span>}
           </div>
-          <button className="icon-btn" onClick={() => setDrilldown(null)} aria-label="Close"><X size={20}/></button>
-        </div>
-        <div className="drilldown-list">
-          {drilldown.rows.length ? drilldown.rows.map(candidateMiniCard) : <div className="empty-state"><Users size={26}/><p>No candidates match this view yet.</p><button className="btn" onClick={() => { setDrilldown(null); setShowCandidateForm(true); }}>Add Candidate</button></div>}
         </div>
       </div>
-    </div>}
-  </div>;
+
+      {/* Edit fields */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="card p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2">Classification</h2>
+          <Field label="Category">
+            <select className="field-select" value={draft.sub_sector || 'Global Fintech'} onChange={e => updateDraft('sub_sector', e.target.value)}>
+              {MARKET_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+            </select>
+          </Field>
+          <Field label="Priority tier">
+            <select className="field-select" value={draft.priority_tier || 'Tier 2'} onChange={e => updateDraft('priority_tier', e.target.value)}>
+              {PRIORITY_TIERS.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </Field>
+          <Field label="Fit score (1–10)">
+            <input
+              className="field-input"
+              type="number"
+              min={1}
+              max={10}
+              value={draft.lean_fit_score ?? ''}
+              onChange={e => updateDraft('lean_fit_score', e.target.value ? Number(e.target.value) : null)}
+            />
+          </Field>
+        </div>
+
+        <div className="card p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2">Location</h2>
+          <Field label="Region">
+            <input className="field-input" value={draft.region || ''} onChange={e => updateDraft('region', e.target.value)} />
+          </Field>
+          <Field label="Country">
+            <input className="field-input" value={draft.country || ''} onChange={e => updateDraft('country', e.target.value)} />
+          </Field>
+          <Field label="HQ city">
+            <input className="field-input" value={draft.hq || ''} onChange={e => updateDraft('hq', e.target.value)} />
+          </Field>
+        </div>
+
+        <div className="card p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2">Links</h2>
+          <Field label="Website">
+            <input className="field-input" placeholder="https://…" value={draft.website_url || ''} onChange={e => updateDraft('website_url', e.target.value)} />
+          </Field>
+          <Field label="LinkedIn">
+            <input className="field-input" placeholder="https://linkedin.com/company/…" value={draft.linkedin_company_url || ''} onChange={e => updateDraft('linkedin_company_url', e.target.value)} />
+          </Field>
+          <Field label="Careers page">
+            <input className="field-input" placeholder="https://…" value={draft.careers_url || ''} onChange={e => updateDraft('careers_url', e.target.value)} />
+          </Field>
+        </div>
+
+        <div className="card p-5 space-y-4">
+          <h2 className="text-sm font-semibold text-slate-700 border-b border-slate-100 pb-2">Intelligence</h2>
+          <Field label="Recommended functions">
+            <input className="field-input" value={draft.recommended_functions || ''} onChange={e => updateDraft('recommended_functions', e.target.value)} />
+          </Field>
+          <Field label="Rationale / notes">
+            <textarea
+              className="field-input resize-none"
+              rows={5}
+              value={draft.rationale || ''}
+              onChange={e => updateDraft('rationale', e.target.value)}
+            />
+          </Field>
+        </div>
+      </div>
+
+      {/* Delete modal */}
+      {pendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="card w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">Remove company?</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Permanently deletes <strong>{draft.name}</strong>. Linked candidates will be detached.
+                </p>
+              </div>
+              <button onClick={() => setPendingDelete(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+            {deleteError && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setPendingDelete(false)} className="btn-secondary" disabled={deleting}>Cancel</button>
+              <button onClick={deleteCompany} className="btn-danger" disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Delete permanently'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="field-label">{label}</label>
+      {children}
+    </div>
+  );
 }
