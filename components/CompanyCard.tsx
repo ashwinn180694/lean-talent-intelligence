@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { ExternalLink, Globe, Linkedin } from 'lucide-react';
 import { FIT_COLORS, TIER_COLORS, fitTone } from '@/lib/market';

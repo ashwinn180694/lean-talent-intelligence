@@ -3,7 +3,10 @@ import { createSupabaseServer } from '@/lib/supabase-server';
 
 export default async function SettingsPage() {
   const supabase = createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
+  // Use getSession() not getUser() — getUser() triggers a network call + token
+  // refresh that Server Components cannot write back, consuming the refresh token.
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   return (
     <AppShell>
