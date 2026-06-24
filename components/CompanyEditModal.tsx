@@ -34,9 +34,10 @@ const FUNDING_STAGES = [
 interface Props {
   company: Company;
   onClose: () => void;
+  onSave?: (updated: Company) => void;
 }
 
-export default function CompanyEditModal({ company, onClose }: Props) {
+export default function CompanyEditModal({ company, onClose, onSave }: Props) {
   const router = useRouter();
   const [form, setForm] = useState<Partial<Company>>({ ...company });
   const [saving, setSaving] = useState(false);
@@ -81,6 +82,7 @@ export default function CompanyEditModal({ company, onClose }: Props) {
       return;
     }
     router.refresh();
+    onSave?.({ ...company, ...updates });
     onClose();
   }
 
