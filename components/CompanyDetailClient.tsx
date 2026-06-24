@@ -278,12 +278,6 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
 
           {/* Left */}
           <div>
-            {company.rationale && (
-              <div style={{ marginBottom: '20px' }}>
-                <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: '#5b6066', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Why this pool</p>
-                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.65', color: '#C8CAD0' }}>{company.rationale}</p>
-              </div>
-            )}
             {company.description && !company.rationale && (
               <div style={{ marginBottom: '20px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: '#5b6066', textTransform: 'uppercase', letterSpacing: '0.06em' }}>About</p>
