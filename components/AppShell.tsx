@@ -19,11 +19,11 @@ export default async function AppShell({ children }: { children: React.ReactNode
   const email = session?.user?.email ?? null;
 
   let profile: { display_name: string | null; title: string | null } | null = null;
-  if (email) {
+  if (session?.user?.id) {
     const { data } = await supabase
-      .from('user_profiles')
+      .from('profiles')
       .select('display_name,title')
-      .eq('email', email)
+      .eq('id', session.user.id)
       .maybeSingle();
     profile = data;
   }
