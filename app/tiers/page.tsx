@@ -109,19 +109,11 @@ export default async function TiersPage() {
                         <Link
                           key={c.id}
                           href={`/companies/${c.id}`}
+                          className="tier-row"
                           style={{
                             display: 'flex', alignItems: 'center', gap: '10px',
                             padding: '10px 16px', textDecoration: 'none',
                             borderBottom: '1px solid rgba(255,255,255,0.03)',
-                            transition: 'background 0.14s, padding-left 0.14s',
-                          }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
-                            (e.currentTarget as HTMLElement).style.paddingLeft = '22px';
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.background = 'transparent';
-                            (e.currentTarget as HTMLElement).style.paddingLeft = '16px';
                           }}
                         >
                           <div style={{ width: '4px', height: '28px', borderRadius: '2px', background: accent, flexShrink: 0 }} />

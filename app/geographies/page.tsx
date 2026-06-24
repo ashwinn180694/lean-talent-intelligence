@@ -61,21 +61,12 @@ export default async function GeographiesPage() {
                 <Link
                   key={name}
                   href={`/geographies/${encodeURIComponent(name)}`}
+                  className="hover-card"
                   style={{
                     display: 'block', textDecoration: 'none', position: 'relative', overflow: 'hidden',
                     background: '#212329', border: '1px solid rgba(255,255,255,0.07)',
                     borderRadius: '11px', padding: '17px 18px 16px',
-                    transition: 'transform 0.16s cubic-bezier(0.2,0.8,0.2,1), border-color 0.16s, box-shadow 0.16s',
-                  }}
-                  onMouseEnter={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = `${accent}60`;
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)';
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 10px 26px rgba(0,0,0,0.38)';
-                  }}
-                  onMouseLeave={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                    ['--card-accent' as any]: `${accent}60`,
                   }}
                 >
                   <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '3px', background: accent }} />
