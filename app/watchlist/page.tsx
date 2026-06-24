@@ -25,7 +25,7 @@ export default async function WatchlistPage() {
 
   const companies: Company[] = (watchlistRows ?? [])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((row: any) => (Array.isArray(row.companies) ? row.companies[0] : row.companies) as Company | null)
+    .map((row: any) => (Array.isArray(row.companies) ? row.companies[0] : row.companies) as Company | null) 
     .filter((c): c is Company => c !== null);
 
   return (
