@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowUp, ArrowDown, Heart, Download, X } from 'lucide-react';
+import { ArrowUp, ArrowDown, Heart, Download, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
+import CsvImportModal from './CsvImportModal';
 
 type SortKey = 'name' | 'sub_sector' | 'region' | 'priority_tier' | 'lean_fit_score';
 type SortDir = 'asc' | 'desc';
@@ -59,6 +60,7 @@ export default function CompaniesGrid({
   const [region, setRegion] = useState(initialRegion || '');
   const [sortKey, setSortKey] = useState<SortKey>('lean_fit_score');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     supabase.from('companies').select('*').then(({ data }) => {
@@ -147,9 +149,14 @@ export default function CompaniesGrid({
               {loading ? 'Loading…' : `${filtered.length} of ${companies.length} companies${hasFilters ? ' · filtered' : ''}`}
             </p>
           </div>
-          <button className="btn-secondary" onClick={() => exportCSV(filtered, 'companies-export.csv')}>
-            <Download size={14} /> Export CSV
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn-secondary" onClick={() => setImportOpen(true)}>
+              <Upload size={14} /> Import CSV
+            </button>
+            <button className="btn-secondary" onClick={() => exportCSV(filtered, 'companies-export.csv')}>
+              <Download size={14} /> Export CSV
+            </button>
+          </div>
         </div>
 
         {/* Filter bar */}
@@ -287,6 +294,16 @@ export default function CompaniesGrid({
           })}
         </div>
       </div>
+      {importOpen && (
+        <CsvImportModal
+          onClose={() => setImportOpen(false)}
+          onDone={() => {
+            supabase.from('companies').select('*').then(({ data }) => {
+              setCompanies((data || []) as Company[]);
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

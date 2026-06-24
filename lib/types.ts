@@ -32,6 +32,7 @@ export type Company = {
   linkedin_url?: string | null;
   tags?: string[] | null;
   last_enriched_at?: string | null;
+  fit_breakdown?: Record<string, number> | null;
 };
 
 export type Candidate = {

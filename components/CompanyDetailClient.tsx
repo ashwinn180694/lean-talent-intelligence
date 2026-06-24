@@ -6,6 +6,10 @@ import { ArrowLeft, Globe, Linkedin, Briefcase, Heart, MapPin, Pencil, Trash2, X
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 import CompanyEditModal from './CompanyEditModal';
+import CompanyNotes from './CompanyNotes';
+import CompanyCandidates from './CompanyCandidates';
+import TierHistory from './TierHistory';
+import FitScoreBreakdown from './FitScoreBreakdown';
 
 const CAT_PALETTE = ['#3DD68C','#46B8D8','#5B5BD6','#D6A35C','#9AB654','#35B979','#F26669'];
 const CAT_LIST = ['Neobank','Payments','Lending','Insurance','WealthTech','Crypto / Digital Assets','RegTech','Open Banking','Remittance','Stablecoin','BaaS','BNPL'];
@@ -255,6 +259,18 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
               ))}
             </div>
 
+            <FitScoreBreakdown
+              companyId={company.id}
+              overallFit={fit}
+              fitBreakdown={company.fit_breakdown}
+              editable
+              onSave={async (breakdown) => {
+                await supabase.from('companies').update({ fit_breakdown: breakdown }).eq('id', company.id);
+                setCompany(c => c ? { ...c, fit_breakdown: breakdown } : c);
+              }}
+            />
+            <TierHistory companyId={company.id} />
+
             {/* Links */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {company.website_url && (
@@ -332,6 +348,12 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             </div>
           </>
         )}
+
+        {/* Candidates + Notes — two column */}
+        <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+          <CompanyCandidates companyId={company.id} />
+          <CompanyNotes companyId={company.id} />
+        </div>
 
         {/* Delete zone */}
         <div style={{ marginTop: '32px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>

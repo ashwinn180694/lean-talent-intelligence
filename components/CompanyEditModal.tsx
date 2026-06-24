@@ -81,6 +81,34 @@ export default function CompanyEditModal({ company, onClose, onSave }: Props) {
       setError(saveError.message);
       return;
     }
+
+    // Log tier change + Slack alert if tier changed
+    if (updates.priority_tier && updates.priority_tier !== company.priority_tier) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('tier_changes').insert({
+          company_id: company.id,
+          changed_by: user.id,
+          changer_email: user.email,
+          old_tier: company.priority_tier || null,
+          new_tier: updates.priority_tier,
+        });
+        // Slack alert (fire-and-forget)
+        fetch('/api/slack', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'tier_change',
+            companyName: company.name,
+            oldTier: company.priority_tier,
+            newTier: updates.priority_tier,
+            changerEmail: user.email || 'team',
+            companyUrl: `${window.location.origin}/companies/${company.id}`,
+          }),
+        }).catch(() => {});
+      }
+    }
+
     router.refresh();
     onSave?.({ ...company, ...updates });
     onClose();
