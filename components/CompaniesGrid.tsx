@@ -1,282 +1,292 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Plus, RotateCcw, X } from 'lucide-react';
-import CompanyCard from './CompanyCard';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import Link from 'next/link';
+import { ArrowUp, ArrowDown, Heart, Download, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
-import { readCompanyCache, writeCompanyCache } from '@/lib/cache';
-import { cleanUrl, MARKET_CATEGORIES, PRIORITY_TIERS } from '@/lib/market';
 import type { Company } from '@/lib/types';
 
-const EMPTY_FORM = {
-  name: '',
-  sub_sector: 'Global Fintech',
-  priority_tier: 'Tier 2',
-  region: 'Global',
-  country: '',
-  lean_fit_score: '',
-  website_url: '',
-  linkedin_company_url: '',
-  recommended_functions: 'Engineering, Product, Commercial, Partnerships, Risk/Compliance',
-  rationale: ''
-};
+type SortKey = 'name' | 'sub_sector' | 'region' | 'priority_tier' | 'lean_fit_score';
+type SortDir = 'asc' | 'desc';
 
-export default function CompaniesGrid() {
+const TIER_ORDER: Record<string, number> = { 'Tier 1': 1, 'Tier 2': 2, 'Tier 3': 3 };
+
+function tierColors(tier: string) {
+  if (tier === 'Tier 1') return { color: '#3DD68C', bg: 'rgba(61,214,140,0.12)', border: 'rgba(61,214,140,0.25)' };
+  if (tier === 'Tier 2') return { color: '#46B8D8', bg: 'rgba(70,184,216,0.12)', border: 'rgba(70,184,216,0.25)' };
+  return { color: '#787F85', bg: 'rgba(120,127,133,0.10)', border: 'rgba(120,127,133,0.20)' };
+}
+
+function fitColor(score: number) {
+  if (score >= 9) return { color: '#3DD68C', bg: 'rgba(61,214,140,0.13)' };
+  if (score >= 8) return { color: '#9AB654', bg: 'rgba(154,182,84,0.13)' };
+  if (score >= 7) return { color: '#D6A35C', bg: 'rgba(214,163,92,0.13)' };
+  if (score >= 5) return { color: '#787F85', bg: 'rgba(120,127,133,0.13)' };
+  return { color: '#F26669', bg: 'rgba(242,102,105,0.13)' };
+}
+
+function exportCSV(rows: Company[], filename: string) {
+  const cols = ['name','priority_tier','sub_sector','region','country','lean_fit_score','recommended_functions','website_url','linkedin_company_url'];
+  const headers = ['Company','Tier','Category','Region','Country','Fit','Functions','Website','LinkedIn'];
+  const escape = (v: any) => {
+    const s = String(v ?? '');
+    return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers.join(','), ...rows.map(r => cols.map(c => escape((r as any)[c])).join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = filename;
+  a.click();
+}
+
+export default function CompaniesGrid({
+  initialCategory,
+  initialRegion,
+  initialTier,
+}: {
+  initialCategory?: string;
+  initialRegion?: string;
+  initialTier?: string;
+}) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [watchSet, setWatchSet] = useState<Set<string>>(new Set());
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [q, setQ] = useState('');
-  const [category, setCategory] = useState('All');
-  const [tier, setTier] = useState('All');
-  const [region, setRegion] = useState('All');
-
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [saving, setSaving] = useState(false);
-  const [addError, setAddError] = useState('');
+  const [tier, setTier] = useState(initialTier || 'All');
+  const [category, setCategory] = useState(initialCategory || '');
+  const [region, setRegion] = useState(initialRegion || '');
+  const [sortKey, setSortKey] = useState<SortKey>('lean_fit_score');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   useEffect(() => {
-    const cached = readCompanyCache<Company>();
-    if (cached) { setCompanies(cached); setLoading(false); }
-    fetchCompanies(!!cached);
+    supabase.from('companies').select('*').then(({ data }) => {
+      setCompanies((data || []) as Company[]);
+      setLoading(false);
+    });
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) return;
+      setUserId(data.user.id);
+      supabase.from('watchlists').select('company_id').eq('user_id', data.user.id).then(({ data: w }) => {
+        setWatchSet(new Set((w || []).map((r: any) => r.company_id)));
+      });
+    });
   }, []);
 
-  async function fetchCompanies(isRefresh = false) {
-    if (isRefresh) setRefreshing(true); else setLoading(true);
-    const { data } = await supabase
-      .from('companies')
-      .select('*')
-      .order('priority_tier')
-      .order('name');
-    if (data) {
-      setCompanies(data as Company[]);
-      writeCompanyCache(data as Company[]);
-    }
-    setLoading(false);
-    setRefreshing(false);
+  const categories = useMemo(() => Array.from(new Set(companies.map(c => c.sub_sector).filter(Boolean) as string[])).sort(), [companies]);
+  const regions = useMemo(() => Array.from(new Set(companies.map(c => c.region).filter(Boolean) as string[])).sort(), [companies]);
+
+  const filtered = useMemo(() => {
+    let rows = companies.filter(c => {
+      const hay = `${c.name} ${c.sub_sector} ${c.region} ${c.priority_tier}`.toLowerCase();
+      return (
+        (!q || hay.includes(q.toLowerCase())) &&
+        (tier === 'All' || !tier || c.priority_tier === tier) &&
+        (!category || c.sub_sector === category) &&
+        (!region || c.region === region)
+      );
+    });
+    rows = [...rows].sort((a, b) => {
+      let av: any, bv: any;
+      if (sortKey === 'lean_fit_score') { av = a.lean_fit_score || 0; bv = b.lean_fit_score || 0; }
+      else if (sortKey === 'priority_tier') { av = TIER_ORDER[a.priority_tier || ''] || 99; bv = TIER_ORDER[b.priority_tier || ''] || 99; }
+      else { av = ((a as any)[sortKey] || '').toLowerCase(); bv = ((b as any)[sortKey] || '').toLowerCase(); }
+      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+    // Name as tiebreaker
+    return rows;
+  }, [companies, q, tier, category, region, sortKey, sortDir]);
+
+  const hasFilters = q || tier !== 'All' || category || region;
+
+  function handleSort(key: SortKey) {
+    if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortKey(key); setSortDir('desc'); }
   }
 
-  const regions = useMemo(
-    () => Array.from(new Set(companies.map(c => c.region).filter(Boolean) as string[])).sort(),
-    [companies]
-  );
-
-  const filtered = useMemo(
-    () =>
-      companies.filter(c => {
-        const hay = `${c.name} ${c.sub_sector} ${c.region} ${c.country} ${c.hq} ${c.rationale}`.toLowerCase();
-        return (
-          hay.includes(q.toLowerCase()) &&
-          (category === 'All' || (c.sub_sector || 'Global Fintech') === category) &&
-          (tier === 'All' || c.priority_tier === tier) &&
-          (region === 'All' || c.region === region)
-        );
-      }),
-    [companies, q, category, tier, region]
-  );
-
-  const hasFilters = q || category !== 'All' || tier !== 'All' || region !== 'All';
-
-  async function addCompany(e: React.FormEvent) {
-    e.preventDefault();
-    setAddError('');
-    if (!form.name.trim()) { setAddError('Company name is required.'); return; }
-    setSaving(true);
-    const { data, error } = await supabase
-      .from('companies')
-      .insert({
-        name: form.name.trim(),
-        sub_sector: form.sub_sector || null,
-        sector: 'FinTech',
-        priority_tier: form.priority_tier || null,
-        region: form.region || null,
-        country: form.country.trim() || null,
-        lean_fit_score: form.lean_fit_score ? Number(form.lean_fit_score) : null,
-        website_url: cleanUrl(form.website_url),
-        linkedin_company_url: cleanUrl(form.linkedin_company_url),
-        recommended_functions: form.recommended_functions.trim() || null,
-        rationale: form.rationale.trim() || null,
-        source: 'Manual'
-      })
-      .select('*')
-      .single();
-    setSaving(false);
-    if (error) { setAddError(error.message); return; }
-    if (data) {
-      const updated = [data as Company, ...companies].sort((a, b) => a.name.localeCompare(b.name));
-      setCompanies(updated);
-      writeCompanyCache(updated);
+  async function toggleWatch(e: React.MouseEvent, companyId: string) {
+    e.preventDefault(); e.stopPropagation();
+    if (!userId) return;
+    const saved = watchSet.has(companyId);
+    const next = new Set(watchSet);
+    if (saved) {
+      next.delete(companyId);
+      await supabase.from('watchlists').delete().eq('user_id', userId).eq('company_id', companyId);
+    } else {
+      next.add(companyId);
+      await supabase.from('watchlists').insert({ user_id: userId, company_id: companyId });
     }
-    setForm(EMPTY_FORM);
-    setShowAdd(false);
+    setWatchSet(next);
   }
+
+  function SortIcon({ k }: { k: SortKey }) {
+    if (sortKey !== k) return null;
+    return sortDir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />;
+  }
+
+  const thStyle = (k: SortKey): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer',
+    userSelect: 'none', color: sortKey === k ? '#EDEEF0' : '#5b6066',
+    fontFamily: "'JetBrains Mono', monospace", fontSize: '10px',
+    textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 400,
+    transition: 'color 0.12s',
+  });
 
   return (
-    <div className="p-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="page-title">Companies</h1>
-          <p className="page-subtitle">
-            {loading ? 'Loading…' : `${filtered.length} of ${companies.length} companies`}
-            {refreshing && <span className="ml-2 text-xs text-brand">Refreshing…</span>}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => fetchCompanies(true)}
-            disabled={refreshing}
-            className="btn-secondary"
-            title="Refresh"
-          >
-            <RotateCcw size={14} className={refreshing ? 'animate-spin' : ''} />
-          </button>
-          <button onClick={() => setShowAdd(true)} className="btn-primary">
-            <Plus size={16} /> Add Company
-          </button>
-        </div>
-      </div>
+    <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ padding: '28px 32px 40px' }}>
 
-      {/* Filters */}
-      <div className="card p-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-48">
-          <label className="field-label">Search</label>
-          <input
-            className="field-input"
-            placeholder="Company name, country, category…"
-            value={q}
-            onChange={e => setQ(e.target.value)}
-          />
-        </div>
-        <div className="min-w-40">
-          <label className="field-label">Category</label>
-          <select className="field-select" value={category} onChange={e => setCategory(e.target.value)}>
-            <option value="All">All categories</option>
-            {MARKET_CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
-        </div>
-        <div className="min-w-36">
-          <label className="field-label">Geography</label>
-          <select className="field-select" value={region} onChange={e => setRegion(e.target.value)}>
-            <option value="All">All regions</option>
-            {regions.map(r => <option key={r}>{r}</option>)}
-          </select>
-        </div>
-        <div className="min-w-32">
-          <label className="field-label">Priority</label>
-          <select className="field-select" value={tier} onChange={e => setTier(e.target.value)}>
-            <option value="All">All tiers</option>
-            {PRIORITY_TIERS.map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-        {hasFilters && (
-          <button
-            onClick={() => { setQ(''); setCategory('All'); setTier('All'); setRegion('All'); }}
-            className="btn-secondary"
-          >
-            <X size={14} /> Clear
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div>
+            <p className="eyebrow" style={{ marginBottom: '4px' }}>Talent universe</p>
+            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>Companies</h1>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#787F85' }}>
+              {loading ? 'Loading…' : `${filtered.length} of ${companies.length} companies${hasFilters ? ' · filtered' : ''}`}
+            </p>
+          </div>
+          <button className="btn-secondary" onClick={() => exportCSV(filtered, 'companies-export.csv')}>
+            <Download size={14} /> Export CSV
           </button>
-        )}
-      </div>
+        </div>
 
-      {/* Grid */}
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="card p-4 animate-pulse space-y-3">
-              <div className="h-4 bg-slate-100 rounded w-3/4" />
-              <div className="h-3 bg-slate-100 rounded w-1/2" />
-              <div className="h-3 bg-slate-100 rounded w-full" />
-              <div className="h-3 bg-slate-100 rounded w-5/6" />
-            </div>
+        {/* Filter bar */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
+          {/* Tier chips */}
+          {['All', 'Tier 1', 'Tier 2', 'Tier 3'].map(t => (
+            <button
+              key={t}
+              onClick={() => setTier(t)}
+              style={{
+                borderRadius: '99px', padding: '5px 14px', fontSize: '12.5px', fontWeight: 500,
+                cursor: 'pointer', border: '1px solid', transition: 'all 0.12s',
+                background: tier === t ? '#3DD68C' : 'transparent',
+                color: tier === t ? '#0c1f16' : '#787F85',
+                borderColor: tier === t ? '#3DD68C' : 'rgba(255,255,255,0.12)',
+              }}
+            >{t}</button>
           ))}
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-slate-500 text-sm">No companies match these filters.</p>
+
+          <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.10)', margin: '0 4px' }} />
+
+          <select
+            className="field-select"
+            value={category}
+            onChange={e => setCategory(e.target.value)}
+            style={{ width: 'auto', minWidth: '140px', padding: '5px 28px 5px 10px', fontSize: '12.5px' }}
+          >
+            <option value="">All categories</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+
+          <select
+            className="field-select"
+            value={region}
+            onChange={e => setRegion(e.target.value)}
+            style={{ width: 'auto', minWidth: '130px', padding: '5px 28px 5px 10px', fontSize: '12.5px' }}
+          >
+            <option value="">All regions</option>
+            {regions.map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+
           {hasFilters && (
             <button
-              onClick={() => { setQ(''); setCategory('All'); setTier('All'); setRegion('All'); }}
-              className="mt-3 btn-secondary"
+              onClick={() => { setQ(''); setTier('All'); setCategory(''); setRegion(''); }}
+              style={{ fontSize: '12px', color: '#787F85', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#EDEEF0')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#787F85')}
             >
-              Clear filters
+              Clear ×
             </button>
           )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(c => <CompanyCard key={c.id} company={c} />)}
-        </div>
-      )}
 
-      {/* Add company modal */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-          <form onSubmit={addCompany} className="card w-full max-w-lg overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-              <div>
-                <h2 className="text-base font-semibold text-slate-900">Add Company</h2>
-                <p className="text-xs text-slate-500">All fields can be edited on the company page later.</p>
+        {/* Table */}
+        <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '11px', overflow: 'hidden' }}>
+          {/* Sticky header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1.7fr 1.5fr 1.2fr 2fr 70px 64px 40px',
+            padding: '10px 16px',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            position: 'sticky', top: 0,
+            background: '#212329', zIndex: 1,
+          }}>
+            {([
+              ['name', 'Company'],
+              ['sub_sector', 'Category'],
+              ['region', 'Region'],
+              [null, 'Functions'],
+              ['priority_tier', 'Tier'],
+              ['lean_fit_score', 'Fit'],
+            ] as [SortKey | null, string][]).map(([k, label]) => (
+              <div
+                key={label}
+                style={k ? thStyle(k) : { ...thStyle('name'), cursor: 'default' }}
+                onClick={() => k && handleSort(k)}
+              >
+                {label} {k && <SortIcon k={k} />}
               </div>
-              <button type="button" onClick={() => { setShowAdd(false); setAddError(''); }} className="text-slate-400 hover:text-slate-600">
-                <X size={18} />
-              </button>
+            ))}
+            <div />
+          </div>
+
+          {/* Rows */}
+          {loading ? (
+            <div style={{ padding: '48px', textAlign: 'center', color: '#5b6066', fontSize: '13px' }}>Loading…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ padding: '48px', textAlign: 'center', color: '#5b6066', fontSize: '13px' }}>
+              No companies match these filters.
             </div>
-            <div className="px-6 py-4 grid grid-cols-2 gap-4">
-              <div className="col-span-2">
-                <label className="field-label">Company name *</label>
-                <input className="field-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required />
-              </div>
-              <div>
-                <label className="field-label">Category</label>
-                <select className="field-select" value={form.sub_sector} onChange={e => setForm(f => ({ ...f, sub_sector: e.target.value }))}>
-                  {MARKET_CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="field-label">Priority tier</label>
-                <select className="field-select" value={form.priority_tier} onChange={e => setForm(f => ({ ...f, priority_tier: e.target.value }))}>
-                  {PRIORITY_TIERS.map(t => <option key={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="field-label">Region</label>
-                <input className="field-input" placeholder="Global, MENA, Europe…" value={form.region} onChange={e => setForm(f => ({ ...f, region: e.target.value }))} />
-              </div>
-              <div>
-                <label className="field-label">Country</label>
-                <input className="field-input" value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} />
-              </div>
-              <div>
-                <label className="field-label">Fit score (1–10)</label>
-                <input className="field-input" type="number" min={1} max={10} value={form.lean_fit_score} onChange={e => setForm(f => ({ ...f, lean_fit_score: e.target.value }))} />
-              </div>
-              <div>
-                <label className="field-label">Website</label>
-                <input className="field-input" placeholder="https://…" value={form.website_url} onChange={e => setForm(f => ({ ...f, website_url: e.target.value }))} />
-              </div>
-              <div className="col-span-2">
-                <label className="field-label">LinkedIn</label>
-                <input className="field-input" placeholder="https://linkedin.com/company/…" value={form.linkedin_company_url} onChange={e => setForm(f => ({ ...f, linkedin_company_url: e.target.value }))} />
-              </div>
-              <div className="col-span-2">
-                <label className="field-label">Rationale / notes</label>
-                <textarea className="field-input min-h-20 resize-none" value={form.rationale} onChange={e => setForm(f => ({ ...f, rationale: e.target.value }))} />
-              </div>
-            </div>
-            {addError && (
-              <div className="mx-6 mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{addError}</div>
-            )}
-            <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-100">
-              <button type="button" onClick={() => setShowAdd(false)} className="btn-secondary">Cancel</button>
-              <button type="submit" disabled={saving} className="btn-primary disabled:opacity-60">
-                {saving ? 'Saving…' : 'Save company'}
-              </button>
-            </div>
-          </form>
+          ) : filtered.map(c => {
+            const tc = tierColors(c.priority_tier || '');
+            const fit = c.lean_fit_score || 0;
+            const fc = fitColor(fit);
+            const saved = watchSet.has(c.id);
+            return (
+              <Link
+                key={c.id}
+                href={`/companies/${c.id}`}
+                className="hover-row"
+                style={{
+                  display: 'grid', gridTemplateColumns: '1.7fr 1.5fr 1.2fr 2fr 70px 64px 40px',
+                  padding: '11px 16px', alignItems: 'center', textDecoration: 'none',
+                  borderBottom: '1px solid rgba(255,255,255,0.03)',
+                }}
+              >
+                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#EDEEF0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
+                <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.sub_sector || '—'}</span>
+                <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.region || '—'}</span>
+                <span style={{ fontSize: '12px', color: '#5b6066', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>
+                  {c.recommended_functions || '—'}
+                </span>
+                <span>
+                  <span className="tier-pill" style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
+                    {c.priority_tier || '—'}
+                  </span>
+                </span>
+                <span>
+                  {fit > 0 ? (
+                    <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(1)}</span>
+                  ) : <span style={{ color: '#5b6066', fontSize: '12px' }}>—</span>}
+                </span>
+                <span style={{ display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    onClick={e => toggleWatch(e, c.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: saved ? '#3DD68C' : '#3a3d43', transition: 'color 0.12s' }}
+                    onMouseEnter={e => { if (!saved) (e.currentTarget as HTMLElement).style.color = '#3DD68C'; }}
+                    onMouseLeave={e => { if (!saved) (e.currentTarget as HTMLElement).style.color = '#3a3d43'; }}
+                  >
+                    <Heart size={15} fill={saved ? '#3DD68C' : 'none'} />
+                  </button>
+                </span>
+              </Link>
+            );
+          })}
         </div>
-      )}
+      </div>
     </div>
   );
 }

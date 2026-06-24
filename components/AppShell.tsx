@@ -35,9 +35,11 @@ export default async function AppShell({ children }: { children: React.ReactNode
         displayName={profile?.display_name}
         title={profile?.title}
       />
-      <main className="app-main">
+      <main className="app-main" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minWidth: 0 }}>
         <GlobalSearch />
-        {children}
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          {children}
+        </div>
       </main>
     </div>
   );
