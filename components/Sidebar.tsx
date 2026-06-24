@@ -71,7 +71,7 @@ export default function Sidebar({
           color: '#0c1f16', fontSize: '14px', fontWeight: 700, flexShrink: 0,
         }}>L</div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#EDEEF0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             Lean Talent Intelligence
           </p>
         </div>
@@ -126,7 +126,7 @@ export default function Sidebar({
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
-            (e.currentTarget as HTMLElement).style.color = '#EDEEF0';
+            (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLElement).style.background = 'transparent';
@@ -156,7 +156,7 @@ export default function Sidebar({
           {ini}
         </div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 500, color: '#EDEEF0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 500, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {displayLabel}
           </p>
           <p style={{ margin: 0, fontSize: '10.5px', color: '#5b6066', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

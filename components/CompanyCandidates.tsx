@@ -163,7 +163,7 @@ export default function CompanyCandidates({ companyId }: { companyId: string }) 
           borderRadius: '10px', padding: '16px', marginBottom: '14px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#EDEEF0' }}>New candidate</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>New candidate</span>
             <button type="button" onClick={() => setAddOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#787F85', display: 'flex' }}>
               <X size={15} />
             </button>
@@ -240,7 +240,7 @@ export default function CompanyCandidates({ companyId }: { companyId: string }) 
                     {initials(c.name)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: '#EDEEF0' }}>{c.name}</p>
+                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF' }}>{c.name}</p>
                     {c.current_position && <p style={{ margin: 0, fontSize: '12px', color: '#787F85' }}>{c.current_position}</p>}
                   </div>
                   {/* Stage selector */}
@@ -270,7 +270,7 @@ export default function CompanyCandidates({ companyId }: { companyId: string }) 
                         </a>
                       )}
                       {c.notes && (
-                        <p style={{ margin: 0, fontSize: '13px', color: '#ADB1B8', lineHeight: '1.55', whiteSpace: 'pre-wrap' }}>{c.notes}</p>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#C8CAD0', lineHeight: '1.55', whiteSpace: 'pre-wrap' }}>{c.notes}</p>
                       )}
                       {c.added_by === userId && (
                         <button

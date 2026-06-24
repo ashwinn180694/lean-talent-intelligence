@@ -53,7 +53,7 @@ export default async function TiersPage() {
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div className="page-enter" style={{ padding: '28px 32px 40px' }}>
           <p className="eyebrow" style={{ marginBottom: '6px' }}>Priority structure</p>
-          <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>Tiers</h1>
+          <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Tiers</h1>
           <p style={{ margin: '0 0 24px', fontSize: '13px', color: '#787F85' }}>
             Every pool ranked by sourcing priority — open a column to map the full list
           </p>
@@ -78,7 +78,7 @@ export default async function TiersPage() {
                     <div style={{ position: 'absolute', top: 0, right: 0, width: '100px', height: '100px', pointerEvents: 'none', background: `radial-gradient(circle at top right, ${color}20, transparent 68%)` }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                       <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: color, flexShrink: 0 }} />
-                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#EDEEF0' }}>{name}</span>
+                      <span style={{ fontSize: '14px', fontWeight: 600, color: '#FFFFFF' }}>{name}</span>
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: color, marginLeft: 'auto' }}>{pct}% of universe</span>
                     </div>
                     <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
@@ -88,7 +88,7 @@ export default async function TiersPage() {
                         { label: 'categories', value: cats },
                       ].map(({ label, value, colored }) => (
                         <div key={label}>
-                          <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 500, color: colored ? color : '#EDEEF0', lineHeight: 1 }}>{value}</p>
+                          <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 500, color: colored ? color : '#FFFFFF', lineHeight: 1 }}>{value}</p>
                           <p style={{ margin: '3px 0 0', fontSize: '10.5px', color: '#5b6066' }}>{label}</p>
                         </div>
                       ))}
@@ -118,7 +118,7 @@ export default async function TiersPage() {
                         >
                           <div style={{ width: '4px', height: '28px', borderRadius: '2px', background: accent, flexShrink: 0 }} />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: '#EDEEF0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
+                            <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</p>
                             <p style={{ margin: 0, fontSize: '11px', color: '#5b6066' }}>{c.region || '—'}</p>
                           </div>
                           {fit > 0 && (

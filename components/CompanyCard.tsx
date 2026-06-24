@@ -83,7 +83,7 @@ export default function CompanyCard({ company, initialWatched }: { company: Comp
 
         {/* Header row: name + heart */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-          <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: '#EDEEF0', lineHeight: 1.35, flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: '#FFFFFF', lineHeight: 1.35, flex: 1, minWidth: 0 }}>
             {company.name}
           </p>
           <button

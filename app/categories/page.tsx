@@ -35,7 +35,7 @@ export default async function CategoriesPage() {
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div className="page-enter" style={{ padding: '28px 32px 40px' }}>
           <p className="eyebrow" style={{ marginBottom: '6px' }}>Market structure</p>
-          <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>Categories</h1>
+          <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Categories</h1>
           <p style={{ margin: '0 0 24px', fontSize: '13px', color: '#787F85' }}>
             {cats.length} talent categories · tinted by sector, bar shows tier mix
           </p>
@@ -59,13 +59,13 @@ export default async function CategoriesPage() {
                   <div style={{ position: 'absolute', top: 0, right: 0, width: '80px', height: '80px', pointerEvents: 'none', background: `radial-gradient(circle at top right, ${accent}24, transparent 68%)` }} />
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', marginTop: '6px' }}>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#EDEEF0' }}>{name}</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#FFFFFF' }}>{name}</p>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10.5px', background: `${topTierColor}20`, color: topTierColor, borderRadius: '99px', padding: '2px 8px' }}>{topTier}</span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <div>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 500, color: '#EDEEF0' }}>{total}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 500, color: '#FFFFFF' }}>{total}</span>
                       <span style={{ fontSize: '12px', color: '#5b6066', marginLeft: '5px' }}>companies</span>
                     </div>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '16px', fontWeight: 500, color: accent }}>{avgFit.toFixed(1)}</span>

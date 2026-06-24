@@ -115,7 +115,7 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
             rows={3}
             style={{
               width: '100%', background: 'transparent', border: 'none', outline: 'none',
-              padding: '10px 12px', fontSize: '13px', color: '#EDEEF0',
+              padding: '10px 12px', fontSize: '13px', color: '#FFFFFF',
               fontFamily: 'inherit', resize: 'none', lineHeight: '1.5',
             }}
           />
@@ -160,7 +160,7 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
                   }}>
                     {initials(note.author_email)}
                   </div>
-                  <span style={{ fontSize: '12px', color: '#ADB1B8', fontWeight: 500 }}>
+                  <span style={{ fontSize: '12px', color: '#C8CAD0', fontWeight: 500 }}>
                     {note.author_email?.split('@')[0].replace(/[._-]+/g, ' ') || 'Team member'}
                   </span>
                   <span style={{ fontSize: '11px', color: '#5b6066' }}>{timeAgo(note.created_at)}</span>
@@ -177,7 +177,7 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
                   </button>
                 )}
               </div>
-              <p style={{ margin: 0, fontSize: '13px', color: '#EDEEF0', lineHeight: '1.55', whiteSpace: 'pre-wrap' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: '#FFFFFF', lineHeight: '1.55', whiteSpace: 'pre-wrap' }}>
                 {note.content}
               </p>
             </div>

@@ -49,7 +49,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div className="page-enter" style={{ padding: '28px 32px 40px' }}>
           <p className="eyebrow" style={{ marginBottom: '6px' }}>Saved for sourcing</p>
-          <h1 style={{ margin: '0 0 32px', fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>Watchlist</h1>
+          <h1 style={{ margin: '0 0 32px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Watchlist</h1>
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
             padding: '64px 24px', border: '1px dashed rgba(255,255,255,0.10)',
@@ -62,7 +62,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
             }}>
               <Heart size={24} style={{ color: '#3DD68C' }} />
             </div>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#EDEEF0' }}>No companies saved yet</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#FFFFFF' }}>No companies saved yet</p>
             <p style={{ margin: 0, fontSize: '13px', color: '#787F85', maxWidth: '300px' }}>
               Browse the companies list and click the heart icon to save companies to your watchlist.
             </p>
@@ -81,7 +81,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
             <p className="eyebrow" style={{ marginBottom: '6px' }}>Saved for sourcing</p>
-            <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>Watchlist</h1>
+            <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Watchlist</h1>
             <p style={{ margin: 0, fontSize: '13px', color: '#787F85' }}>
               {companies.length} companies saved · {tier1} Tier 1 · avg fit {avgFit}
             </p>
@@ -118,7 +118,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
                   borderBottom: '1px solid rgba(255,255,255,0.03)',
                 }}
               >
-                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#EDEEF0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
                 <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.sub_sector || '—'}</span>
                 <span style={{ fontSize: '12.5px', color: '#787F85', paddingRight: '8px' }}>{c.region || '—'}</span>
                 <span>

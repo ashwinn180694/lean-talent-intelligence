@@ -71,7 +71,7 @@ export default async function DashboardPage() {
 
         {/* Header */}
         <p className="eyebrow" style={{ marginBottom: '6px' }}>Today's briefing</p>
-        <h1 style={{ margin: '0 0 20px', fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>
+        <h1 style={{ margin: '0 0 20px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>
           Where to source next
         </h1>
 
@@ -83,9 +83,9 @@ export default async function DashboardPage() {
           display: 'flex', gap: '24px', alignItems: 'stretch',
           marginBottom: '20px',
         }}>
-          <p style={{ flex: 1, margin: 0, fontSize: '14px', lineHeight: '1.65', color: '#ADB1B8' }}>
-            Your talent universe spans <strong style={{ color: '#EDEEF0' }}>{total} companies</strong> across {catMap.size} categories.{' '}
-            <strong style={{ color: '#EDEEF0' }}>{highFit.length} high-fit pools</strong> (score ≥8) are ready for active sourcing.{' '}
+          <p style={{ flex: 1, margin: 0, fontSize: '14px', lineHeight: '1.65', color: '#C8CAD0' }}>
+            Your talent universe spans <strong style={{ color: '#FFFFFF' }}>{total} companies</strong> across {catMap.size} categories.{' '}
+            <strong style={{ color: '#FFFFFF' }}>{highFit.length} high-fit pools</strong> (score ≥8) are ready for active sourcing.{' '}
             {covGaps.length > 0
               ? `Coverage gaps remain in ${covGaps.map(g => g.name).join(', ')} — no Tier 1 pools mapped yet.`
               : `All major categories have at least one Tier 1 pool — strong coverage.`}
@@ -99,7 +99,7 @@ export default async function DashboardPage() {
               <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#787F85' }}>high-fit pools</p>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '30px', fontWeight: 500, color: '#EDEEF0', lineHeight: 1 }}>{tier1.length}</p>
+              <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '30px', fontWeight: 500, color: '#FFFFFF', lineHeight: 1 }}>{tier1.length}</p>
               <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#787F85' }}>Tier 1 pools</p>
             </div>
           </div>
@@ -121,7 +121,7 @@ export default async function DashboardPage() {
                 <Icon size={15} style={{ color }} />
                 <span style={{ fontSize: '11.5px', color: '#787F85' }}>{label}</span>
               </div>
-              <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '28px', fontWeight: 500, color: '#EDEEF0', lineHeight: 1 }}>{value}</p>
+              <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '28px', fontWeight: 500, color: '#FFFFFF', lineHeight: 1 }}>{value}</p>
               <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#5b6066' }}>{sub}</p>
             </div>
           ))}
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Star size={15} style={{ color: '#3DD68C' }} />
-                <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#EDEEF0' }}>High-fit shortlist</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#FFFFFF' }}>High-fit shortlist</span>
               </div>
               <Link href="/companies" style={{ fontSize: '12px', color: '#3DD68C', textDecoration: 'none' }}>
                 View all companies →
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
                     borderBottom: '1px solid rgba(255,255,255,0.03)',
                   }}
                 >
-                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#EDEEF0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</span>
                   <span style={{ fontSize: '12px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.sub_sector || '—'}</span>
                   <span style={{ fontSize: '12px', color: '#787F85' }}>{c.region || '—'}</span>
                   <span>
@@ -186,7 +186,7 @@ export default async function DashboardPage() {
 
             {/* Priority tiers bar */}
             <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '16px 18px' }}>
-              <p style={{ margin: '0 0 12px', fontSize: '13px', fontWeight: 600, color: '#EDEEF0' }}>Priority tiers</p>
+              <p style={{ margin: '0 0 12px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>Priority tiers</p>
               <div style={{ display: 'flex', height: '9px', borderRadius: '99px', overflow: 'hidden', marginBottom: '12px' }}>
                 {[
                   { arr: tier1, color: '#3DD68C' },
@@ -203,8 +203,8 @@ export default async function DashboardPage() {
               ].map(({ label, arr, color }) => (
                 <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: color, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: '12.5px', color: '#ADB1B8' }}>{label}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#EDEEF0' }}>{arr.length}</span>
+                  <span style={{ flex: 1, fontSize: '12.5px', color: '#C8CAD0' }}>{label}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#FFFFFF' }}>{arr.length}</span>
                   <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#5b6066', width: '32px', textAlign: 'right' }}>{tierPct(arr)}%</span>
                 </div>
               ))}
@@ -213,7 +213,7 @@ export default async function DashboardPage() {
             {/* Top categories */}
             <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#EDEEF0' }}>Top categories</p>
+                <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>Top categories</p>
                 <Link href="/categories" style={{ fontSize: '12px', color: '#3DD68C', textDecoration: 'none' }}>All categories →</Link>
               </div>
               {cats.map(({ name, count, avgFit: af, color }) => (
@@ -224,7 +224,7 @@ export default async function DashboardPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.03)' }}
                 >
                   <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: color, flexShrink: 0 }} />
-                  <span style={{ flex: 1, fontSize: '12.5px', color: '#ADB1B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                  <span style={{ flex: 1, fontSize: '12.5px', color: '#C8CAD0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                   <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#3DD68C' }}>{af}</span>
                   <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#5b6066' }}>{count}</span>
                 </Link>
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
               <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '16px 18px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '12px' }}>
                   <AlertCircle size={15} style={{ color: '#D6A35C' }} />
-                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#EDEEF0' }}>Coverage gaps</p>
+                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>Coverage gaps</p>
                 </div>
                 {covGaps.map(({ name, count }) => (
                   <Link
@@ -245,7 +245,7 @@ export default async function DashboardPage() {
                     className="hover-row"
                     style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.03)' }}
                   >
-                    <span style={{ flex: 1, fontSize: '12.5px', color: '#ADB1B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                    <span style={{ flex: 1, fontSize: '12.5px', color: '#C8CAD0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                     <span style={{
                       fontFamily: "'JetBrains Mono', monospace", fontSize: '10.5px',
                       background: 'rgba(214,163,92,0.12)', color: '#D6A35C',

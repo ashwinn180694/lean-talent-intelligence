@@ -130,7 +130,7 @@ export default function CompaniesGrid({
 
   const thStyle = (k: SortKey): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer',
-    userSelect: 'none', color: sortKey === k ? '#EDEEF0' : '#5b6066',
+    userSelect: 'none', color: sortKey === k ? '#FFFFFF' : '#5b6066',
     fontFamily: "'JetBrains Mono', monospace", fontSize: '10px',
     textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 400,
     transition: 'color 0.12s',
@@ -144,7 +144,7 @@ export default function CompaniesGrid({
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
           <div>
             <p className="eyebrow" style={{ marginBottom: '4px' }}>Talent universe</p>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>Companies</h1>
+            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Companies</h1>
             <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#787F85' }}>
               {loading ? 'Loading…' : `${filtered.length} of ${companies.length} companies${hasFilters ? ' · filtered' : ''}`}
             </p>
@@ -202,7 +202,7 @@ export default function CompaniesGrid({
             <button
               onClick={() => { setQ(''); setTier('All'); setCategory(''); setRegion(''); }}
               style={{ fontSize: '12px', color: '#787F85', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', transition: 'color 0.12s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#EDEEF0')}
+              onMouseEnter={e => (e.currentTarget.style.color = '#FFFFFF')}
               onMouseLeave={e => (e.currentTarget.style.color = '#787F85')}
             >
               Clear ×
@@ -263,7 +263,7 @@ export default function CompaniesGrid({
                   borderBottom: '1px solid rgba(255,255,255,0.03)',
                 }}
               >
-                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#EDEEF0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
                 <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.sub_sector || '—'}</span>
                 <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.region || '—'}</span>
                 <span style={{ fontSize: '12px', color: '#5b6066', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>

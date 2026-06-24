@@ -149,7 +149,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
           <Link
             href="/companies"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#787F85', textDecoration: 'none', transition: 'color 0.12s' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#EDEEF0')}
+            onMouseEnter={e => (e.currentTarget.style.color = '#FFFFFF')}
             onMouseLeave={e => (e.currentTarget.style.color = '#787F85')}
           >
             <ArrowLeft size={14} /> Companies
@@ -168,7 +168,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                   display: 'flex', alignItems: 'center', gap: '5px',
                   padding: '5px 10px', borderRadius: '6px', fontSize: '12.5px',
                   background: prevCompany ? 'rgba(255,255,255,0.05)' : 'transparent',
-                  color: prevCompany ? '#ADB1B8' : '#3a3d43',
+                  color: prevCompany ? '#C8CAD0' : '#3a3d43',
                   border: '1px solid',
                   borderColor: prevCompany ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
                   textDecoration: 'none', transition: 'all 0.12s',
@@ -187,7 +187,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                   display: 'flex', alignItems: 'center', gap: '5px',
                   padding: '5px 10px', borderRadius: '6px', fontSize: '12.5px',
                   background: nextCompany ? 'rgba(255,255,255,0.05)' : 'transparent',
-                  color: nextCompany ? '#ADB1B8' : '#3a3d43',
+                  color: nextCompany ? '#C8CAD0' : '#3a3d43',
                   border: '1px solid',
                   borderColor: nextCompany ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
                   textDecoration: 'none', transition: 'all 0.12s',
@@ -217,7 +217,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
               {company.name[0].toUpperCase()}
             </div>
             <div>
-              <h1 style={{ margin: '0 0 6px', fontSize: '25px', fontWeight: 600, color: '#EDEEF0' }}>{company.name}</h1>
+              <h1 style={{ margin: '0 0 6px', fontSize: '25px', fontWeight: 600, color: '#FFFFFF' }}>{company.name}</h1>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#787F85' }}>
                 {company.sub_sector && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -262,7 +262,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             <button
               onClick={() => setEditOpen(true)}
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', padding: '8px', cursor: 'pointer', color: '#787F85', display: 'flex', transition: 'all 0.12s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#EDEEF0'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#787F85'; }}
             >
               <Pencil size={14} />
@@ -281,13 +281,13 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             {company.rationale && (
               <div style={{ marginBottom: '20px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: '#5b6066', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Why this pool</p>
-                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.65', color: '#ADB1B8' }}>{company.rationale}</p>
+                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.65', color: '#C8CAD0' }}>{company.rationale}</p>
               </div>
             )}
             {company.description && !company.rationale && (
               <div style={{ marginBottom: '20px' }}>
                 <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: '#5b6066', textTransform: 'uppercase', letterSpacing: '0.06em' }}>About</p>
-                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.65', color: '#ADB1B8' }}>{company.description}</p>
+                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.65', color: '#C8CAD0' }}>{company.description}</p>
               </div>
             )}
             {functions.length > 0 && (
@@ -324,7 +324,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
               ].filter(([, v]) => v).map(([label, value]) => (
                 <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', gap: '12px' }}>
                   <span style={{ fontSize: '12.5px', color: '#5b6066', flexShrink: 0 }}>{label}</span>
-                  <span style={{ fontSize: '12.5px', color: '#ADB1B8', textAlign: 'right' }}>{value}</span>
+                  <span style={{ fontSize: '12.5px', color: '#C8CAD0', textAlign: 'right' }}>{value}</span>
                 </div>
               ))}
             </div>
@@ -347,11 +347,11 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                 <a href={company.website_url} target="_blank" rel="noopener noreferrer" style={{
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px', fontSize: '13px', color: '#ADB1B8', textDecoration: 'none',
+                  borderRadius: '8px', fontSize: '13px', color: '#C8CAD0', textDecoration: 'none',
                   transition: 'all 0.12s',
                 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#EDEEF0'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#ADB1B8'; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#C8CAD0'; }}
                 >
                   <Globe size={14} style={{ color: '#3DD68C', flexShrink: 0 }} /> Website
                 </a>
@@ -360,11 +360,11 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                 <a href={company.linkedin_company_url} target="_blank" rel="noopener noreferrer" style={{
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px', fontSize: '13px', color: '#ADB1B8', textDecoration: 'none',
+                  borderRadius: '8px', fontSize: '13px', color: '#C8CAD0', textDecoration: 'none',
                   transition: 'all 0.12s',
                 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#EDEEF0'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#ADB1B8'; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#C8CAD0'; }}
                 >
                   <Linkedin size={14} style={{ color: '#3DD68C', flexShrink: 0 }} /> LinkedIn
                 </a>
@@ -373,11 +373,11 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                 <a href={company.careers_url} target="_blank" rel="noopener noreferrer" style={{
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px',
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px', fontSize: '13px', color: '#ADB1B8', textDecoration: 'none',
+                  borderRadius: '8px', fontSize: '13px', color: '#C8CAD0', textDecoration: 'none',
                   transition: 'all 0.12s',
                 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#EDEEF0'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#ADB1B8'; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#C8CAD0'; }}
                 >
                   <Briefcase size={14} style={{ color: '#3DD68C', flexShrink: 0 }} /> Careers
                 </a>
@@ -390,7 +390,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
         {similar.length > 0 && (
           <>
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '0 0 20px' }} />
-            <p style={{ margin: '0 0 14px', fontSize: '13.5px', fontWeight: 600, color: '#EDEEF0' }}>
+            <p style={{ margin: '0 0 14px', fontSize: '13.5px', fontWeight: 600, color: '#FFFFFF' }}>
               Similar pools in {company.sub_sector}
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px' }}>
@@ -410,7 +410,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                       {sfit > 0 && <span className="fit-chip" style={{ background: `${sfc}20`, color: sfc, fontSize: '11px' }}>{sfit.toFixed(1)}</span>}
                     </div>
-                    <p style={{ margin: '0 0 4px', fontSize: '13.5px', fontWeight: 600, color: '#EDEEF0' }}>{s.name}</p>
+                    <p style={{ margin: '0 0 4px', fontSize: '13.5px', fontWeight: 600, color: '#FFFFFF' }}>{s.name}</p>
                     <p style={{ margin: 0, fontSize: '12px', color: '#787F85' }}>{s.region || '—'}</p>
                   </Link>
                 );
@@ -438,7 +438,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             </button>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#ADB1B8' }}>Are you sure?</span>
+              <span style={{ fontSize: '13px', color: '#C8CAD0' }}>Are you sure?</span>
               <button
                 onClick={deleteCompany}
                 disabled={deleting}

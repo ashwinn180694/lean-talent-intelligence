@@ -174,7 +174,7 @@ export default function GlobalSearch() {
                 placeholder="Search Plaid, Payments, UAE…"
                 style={{
                   flex: 1, background: 'transparent', fontSize: '14px',
-                  color: '#EDEEF0', border: 'none', outline: 'none', fontFamily: 'inherit',
+                  color: '#FFFFFF', border: 'none', outline: 'none', fontFamily: 'inherit',
                 }}
               />
               <button onClick={() => setOpen(false)} style={{ color: '#5b6066', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}>
@@ -213,7 +213,7 @@ export default function GlobalSearch() {
                     <Building2 size={15} />
                   </span>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: '#EDEEF0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.title}</p>
+                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.title}</p>
                     <p style={{ margin: 0, fontSize: '11.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.sub}</p>
                   </div>
                 </Link>
@@ -249,7 +249,7 @@ export default function GlobalSearch() {
             <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <p className="eyebrow" style={{ marginBottom: '4px' }}>New talent pool</p>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#EDEEF0' }}>Add company</h2>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#FFFFFF' }}>Add company</h2>
                 <button onClick={() => setAddOpen(false)} style={{ background: 'none', border: 'none', color: '#787F85', cursor: 'pointer', display: 'flex' }}>
                   <X size={18} />
                 </button>

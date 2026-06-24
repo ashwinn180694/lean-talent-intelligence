@@ -54,7 +54,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
             }} />
             <div style={{ padding: '20px 24px 22px' }}>
               <p className="eyebrow" style={{ marginBottom: '4px' }}>Category</p>
-              <h1 style={{ margin: '0 0 10px', fontSize: '24px', fontWeight: 600, color: '#EDEEF0' }}>{name}</h1>
+              <h1 style={{ margin: '0 0 10px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>{name}</h1>
 
               {/* Stats row */}
               <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
@@ -64,7 +64,7 @@ export default async function CategoryPage({ params }: { params: { slug: string 
                   { label: 'Tier 1', value: t1 },
                 ].map(({ label, value, colored }) => (
                   <div key={label}>
-                    <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 500, color: colored ? accent : '#EDEEF0', lineHeight: 1 }}>{value}</p>
+                    <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 500, color: colored ? accent : '#FFFFFF', lineHeight: 1 }}>{value}</p>
                     <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#5b6066' }}>{label}</p>
                   </div>
                 ))}

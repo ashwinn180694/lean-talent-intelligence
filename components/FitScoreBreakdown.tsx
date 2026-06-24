@@ -73,7 +73,7 @@ export default function FitScoreBreakdown({ companyId, overallFit, fitBreakdown,
               <div key={key}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <div>
-                    <span style={{ fontSize: '12.5px', color: '#EDEEF0', fontWeight: 500 }}>{label}</span>
+                    <span style={{ fontSize: '12.5px', color: '#FFFFFF', fontWeight: 500 }}>{label}</span>
                     {!editing && <span style={{ fontSize: '11px', color: '#5b6066', marginLeft: '6px' }}>{description}</span>}
                   </div>
                   {editing ? (
@@ -83,7 +83,7 @@ export default function FitScoreBreakdown({ companyId, overallFit, fitBreakdown,
                       onChange={e => setScores(s => ({ ...s, [key]: parseFloat(e.target.value) || 0 }))}
                       style={{
                         width: '52px', background: '#1B1B1F', border: '1px solid rgba(255,255,255,0.10)',
-                        borderRadius: '5px', color: '#EDEEF0', fontSize: '12px', padding: '3px 6px',
+                        borderRadius: '5px', color: '#FFFFFF', fontSize: '12px', padding: '3px 6px',
                         fontFamily: "'JetBrains Mono', monospace", textAlign: 'center', outline: 'none',
                       }}
                     />

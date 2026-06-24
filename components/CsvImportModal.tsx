@@ -152,7 +152,7 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p className="eyebrow" style={{ marginBottom: '4px' }}>Bulk import</p>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#EDEEF0' }}>Import companies from CSV</h2>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#FFFFFF' }}>Import companies from CSV</h2>
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#787F85', cursor: 'pointer', display: 'flex' }}>
               <X size={18} />
@@ -169,7 +169,7 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
                 Upload a CSV file with company data. Existing companies (matched by name) will be updated; new ones will be added.
               </p>
               <p style={{ margin: '0 0 16px', fontSize: '12px', color: '#5b6066' }}>
-                Supported columns: <span style={{ color: '#ADB1B8' }}>name, tier, category, region, country, fit, website, linkedin, careers, functions, description, headcount, stage, raised, founded, investors</span>
+                Supported columns: <span style={{ color: '#C8CAD0' }}>name, tier, category, region, country, fit, website, linkedin, careers, functions, description, headcount, stage, raised, founded, investors</span>
               </p>
 
               <div
@@ -185,7 +185,7 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(61,214,140,0.25)'; (e.currentTarget as HTMLElement).style.background = 'rgba(61,214,140,0.03)'; }}
               >
                 <Upload size={28} style={{ color: '#3DD68C', marginBottom: '10px' }} />
-                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: '#EDEEF0' }}>Click to upload or drag & drop</p>
+                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: '#FFFFFF' }}>Click to upload or drag & drop</p>
                 <p style={{ margin: 0, fontSize: '12px', color: '#5b6066' }}>CSV files only</p>
                 <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
               </div>
@@ -198,7 +198,7 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                 <FileText size={16} style={{ color: '#3DD68C' }} />
-                <span style={{ fontSize: '13px', color: '#ADB1B8' }}>{rows.length} rows ready to import</span>
+                <span style={{ fontSize: '13px', color: '#C8CAD0' }}>{rows.length} rows ready to import</span>
                 <button onClick={() => setStep('upload')} style={{ marginLeft: 'auto', fontSize: '12px', color: '#787F85', background: 'none', border: 'none', cursor: 'pointer' }}>← Change file</button>
               </div>
 
@@ -212,7 +212,7 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
                 {rows.slice(0, 10).map((row, i) => (
                   <div key={i} style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(headers.length, 4)}, 1fr)`, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                     {headers.slice(0, 4).map(h => (
-                      <span key={h} style={{ fontSize: '12.5px', color: '#ADB1B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{row[h] || '—'}</span>
+                      <span key={h} style={{ fontSize: '12.5px', color: '#C8CAD0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{row[h] || '—'}</span>
                     ))}
                   </div>
                 ))}
