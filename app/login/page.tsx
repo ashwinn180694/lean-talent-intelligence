@@ -70,7 +70,7 @@ export default function LoginPage() {
             <span style={{ fontSize: '20px', fontWeight: 700, color: '#0c1f16' }}>L</span>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: 600, color: '#EDEEF0', margin: 0 }}>Lean Market</h1>
+            <h1 style={{ fontSize: '18px', fontWeight: 600, color: '#EDEEF0', margin: 0 }}>Lean Talent Intelligence</h1>
             <p style={{ fontSize: '13px', color: '#5b6066', margin: '4px 0 0' }}>
               Sign in with your @{ALLOWED_DOMAIN} account
             </p>

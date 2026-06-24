@@ -71,11 +71,8 @@ export default function Sidebar({
           color: '#0c1f16', fontSize: '14px', fontWeight: 700, flexShrink: 0,
         }}>L</div>
         <div style={{ minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: '#EDEEF0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            Lean Market
-          </p>
-          <p style={{ margin: 0, fontSize: '10.5px', color: '#5b6066', whiteSpace: 'nowrap' }}>
-            Talent Intelligence
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#EDEEF0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Lean Talent Intelligence
           </p>
         </div>
       </div>

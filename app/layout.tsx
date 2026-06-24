@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Lean Market',
+  title: 'Lean Talent Intelligence',
   description: 'Talent intelligence platform for Lean Technologies'
 };
 
