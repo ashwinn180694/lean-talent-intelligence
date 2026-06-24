@@ -1,119 +1,138 @@
 'use client';
 
 import Link from 'next/link';
-import { Globe, Linkedin } from 'lucide-react';
-import { fitTone } from '@/lib/market';
+import { Heart, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
-import WatchlistButton from '@/components/WatchlistButton';
 
-const FIT_STYLES: Record<string, { bg: string; color: string }> = {
-  high:    { bg: '#f0fdf4', color: '#15803d' },
-  mid:     { bg: '#fffbeb', color: '#b45309' },
-  low:     { bg: '#fef2f2', color: '#dc2626' },
-  neutral: { bg: '#f0ede8', color: '#9a9080' }
-};
+const CAT_PALETTE = ['#3DD68C','#46B8D8','#5B5BD6','#D6A35C','#9AB654','#35B979','#F26669'];
+const CAT_LIST = ['Neobank','Payments','Lending','Insurance','WealthTech','Crypto / Digital Assets','RegTech','Open Banking','Remittance','Stablecoin','BaaS','BNPL'];
 
-const TIER_STYLES: Record<string, { bg: string; color: string }> = {
-  'Tier 1': { bg: '#fef7ed', color: '#c47e3a' },
-  'Tier 2': { bg: '#eff6ff', color: '#2563eb' },
-  'Tier 3': { bg: '#f8f7f4', color: '#9a9080' }
-};
+function catColor(cat?: string | null) {
+  const i = CAT_LIST.indexOf(cat || '');
+  return CAT_PALETTE[i >= 0 ? i % CAT_PALETTE.length : 0];
+}
 
-export default function CompanyCard({ company, isWatched }: { company: Company; isWatched?: boolean }) {
-  const fitKey = fitTone(company.lean_fit_score);
-  const fitStyle = FIT_STYLES[fitKey];
-  const tierStyle = company.priority_tier ? TIER_STYLES[company.priority_tier] : null;
+function tierColors(tier: string) {
+  if (tier === 'Tier 1') return { color: '#3DD68C', bg: 'rgba(61,214,140,0.12)', border: 'rgba(61,214,140,0.25)' };
+  if (tier === 'Tier 2') return { color: '#46B8D8', bg: 'rgba(70,184,216,0.12)', border: 'rgba(70,184,216,0.25)' };
+  return { color: '#787F85', bg: 'rgba(120,127,133,0.10)', border: 'rgba(120,127,133,0.20)' };
+}
+
+function fitColor(score: number) {
+  if (score >= 9) return { color: '#3DD68C', bg: 'rgba(61,214,140,0.13)' };
+  if (score >= 8) return { color: '#9AB654', bg: 'rgba(154,182,84,0.13)' };
+  if (score >= 7) return { color: '#D6A35C', bg: 'rgba(214,163,92,0.13)' };
+  if (score >= 5) return { color: '#787F85', bg: 'rgba(120,127,133,0.13)' };
+  return { color: '#F26669', bg: 'rgba(242,102,105,0.13)' };
+}
+
+export default function CompanyCard({ company, initialWatched }: { company: Company; initialWatched?: boolean; isWatched?: boolean }) {
+  const accent = catColor(company.sub_sector);
+  const fit = company.lean_fit_score || 0;
+  const fc = fitColor(fit);
+  const tc = company.priority_tier ? tierColors(company.priority_tier) : null;
+  const [watched, setWatched] = useState(initialWatched ?? false);
+  const [saving, setSaving] = useState(false);
+
+  async function toggleWatch(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (saving) return;
+    setSaving(true);
+    setWatched(w => !w);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setWatched(w => !w); setSaving(false); return; }
+    if (!watched) {
+      const { error } = await supabase.from('watchlists').insert({ user_id: user.id, company_id: company.id });
+      if (error) setWatched(w => !w);
+    } else {
+      const { error } = await supabase.from('watchlists').delete().eq('user_id', user.id).eq('company_id', company.id);
+      if (error) setWatched(w => !w);
+    }
+    setSaving(false);
+  }
 
   return (
-    <div style={{ position: 'relative' }}>
-      <WatchlistButton companyId={company.id} initialWatched={isWatched ?? false} />
     <Link
       href={`/companies/${company.id}`}
+      className="hover-card"
       style={{
-        display: 'flex', flexDirection: 'column', gap: '10px',
-        background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '10px',
-        padding: '16px', textDecoration: 'none',
-        transition: 'border-color 0.15s, box-shadow 0.15s'
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'var(--hover-border)';
-        e.currentTarget.style.boxShadow = '0 2px 8px var(--hover-shadow)';
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'var(--border)';
-        e.currentTarget.style.boxShadow = 'none';
+        display: 'flex', flexDirection: 'column',
+        background: '#212329',
+        border: '1px solid rgba(255,255,255,0.07)',
+        borderRadius: '11px',
+        textDecoration: 'none',
+        overflow: 'hidden',
+        position: 'relative',
+        ['--card-accent' as any]: `${accent}55`,
       }}
     >
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-        <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, lineHeight: 1.35 }}>
-          {company.name}
-        </h3>
-        {company.lean_fit_score != null && (
-          <span style={{ ...fitStyle, flexShrink: 0, borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 600 }}>
-            {company.lean_fit_score}
-          </span>
-        )}
-      </div>
+      {/* Accent top bar */}
+      <div style={{ height: '3px', background: accent, flexShrink: 0 }} />
 
-      {/* Badges */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-        {company.sub_sector && (
-          <span style={{ background: 'var(--hover-row-bg)', color: 'var(--text-muted)', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
-            {company.sub_sector}
-          </span>
-        )}
-        {company.priority_tier && tierStyle && (
-          <span style={{ ...tierStyle, borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
-            {company.priority_tier}
-          </span>
-        )}
-        {(company.country || company.region) && (
-          <span style={{ background: 'var(--hover-row-bg)', color: 'var(--text-muted)', borderRadius: '99px', padding: '2px 8px', fontSize: '11px', fontWeight: 500 }}>
-            {company.country || company.region}
-          </span>
-        )}
-      </div>
+      {/* Corner glow */}
+      <div style={{
+        position: 'absolute', top: 3, right: 0, width: '70px', height: '70px',
+        pointerEvents: 'none',
+        background: `radial-gradient(circle at top right, ${accent}20, transparent 68%)`,
+      }} />
 
-      {/* Rationale */}
-      {company.rationale && (
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {company.rationale}
-        </p>
-      )}
+      <div style={{ padding: '14px 15px 15px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
 
-      {/* Links */}
-      {(company.website_url || company.linkedin_company_url) && (
-        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '12px', paddingTop: '10px', borderTop: '1px solid var(--hover-row-bg)' }}>
-          {company.website_url && (
-            <a
-              href={company.website_url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={e => e.stopPropagation()}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: 'var(--text-faint)', textDecoration: 'none', transition: 'color 0.12s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
-            >
-              <Globe size={11} /> Website
-            </a>
+        {/* Header row: name + heart */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+          <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: '#EDEEF0', lineHeight: 1.35, flex: 1, minWidth: 0 }}>
+            {company.name}
+          </p>
+          <button
+            onClick={toggleWatch}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer', padding: '2px',
+              display: 'flex', flexShrink: 0, color: watched ? '#3DD68C' : '#3a3d43',
+              transition: 'color 0.12s',
+            }}
+            onMouseEnter={e => { if (!watched) (e.currentTarget as HTMLElement).style.color = '#3DD68C'; }}
+            onMouseLeave={e => { if (!watched) (e.currentTarget as HTMLElement).style.color = '#3a3d43'; }}
+            title={watched ? 'Remove from watchlist' : 'Add to watchlist'}
+          >
+            <Heart size={14} fill={watched ? '#3DD68C' : 'none'} />
+          </button>
+        </div>
+
+        {/* Fit + Tier row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {fit > 0 && (
+            <span className="fit-chip" style={{ background: fc.bg, color: fc.color, fontSize: '11px' }}>
+              {fit.toFixed(1)}
+            </span>
           )}
-          {company.linkedin_company_url && (
-            <a
-              href={company.linkedin_company_url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={e => e.stopPropagation()}
-              style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: 'var(--text-faint)', textDecoration: 'none', transition: 'color 0.12s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--brand)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
-            >
-              <Linkedin size={11} /> LinkedIn
-            </a>
+          {company.priority_tier && tc && (
+            <span className="tier-pill" style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.border}`, fontSize: '10.5px' }}>
+              {company.priority_tier}
+            </span>
           )}
         </div>
-      )}
+
+        {/* Region */}
+        {(company.region || company.country) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: 'auto' }}>
+            <MapPin size={11} style={{ color: '#5b6066', flexShrink: 0 }} />
+            <span style={{ fontSize: '12px', color: '#5b6066' }}>{company.country || company.region}</span>
+          </div>
+        )}
+
+        {/* Rationale snippet */}
+        {company.rationale && (
+          <p style={{
+            margin: 0, fontSize: '11.5px', color: '#787F85', lineHeight: 1.5,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>
+            {company.rationale}
+          </p>
+        )}
+      </div>
     </Link>
-    </div>
   );
 }

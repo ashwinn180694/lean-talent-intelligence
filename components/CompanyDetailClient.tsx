@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Globe, Linkedin, Briefcase, Heart, MapPin, Pencil, Trash2, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Globe, Linkedin, Briefcase, Heart, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 import CompanyEditModal from './CompanyEditModal';
@@ -34,8 +35,10 @@ function fitColor(score: number) {
 }
 
 export default function CompanyDetailClient({ companyId }: { companyId: string }) {
+  const router = useRouter();
   const [company, setCompany] = useState<Company | null>(null);
   const [similar, setSimilar] = useState<Company[]>([]);
+  const [categoryPeers, setCategoryPeers] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -47,16 +50,15 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
     const { data } = await supabase.from('companies').select('*').eq('id', companyId).single();
     if (data) {
       setCompany(data as Company);
-      // Load similar pools in same category
       if (data.sub_sector) {
-        const { data: sim } = await supabase
+        const { data: peers } = await supabase
           .from('companies')
-          .select('*')
+          .select('id,name,lean_fit_score')
           .eq('sub_sector', data.sub_sector)
-          .neq('id', companyId)
-          .order('lean_fit_score', { ascending: false })
-          .limit(3);
-        setSimilar((sim || []) as Company[]);
+          .order('lean_fit_score', { ascending: false });
+        const allPeers = (peers || []) as Company[];
+        setCategoryPeers(allPeers);
+        setSimilar(allPeers.filter(p => p.id !== companyId).slice(0, 3));
       }
     }
     setLoading(false);
@@ -75,6 +77,24 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
         .then(({ data: w }) => setSaved(!!w));
     });
   }, [companyId]);
+
+  // Prev/next within category
+  const currentIdx = categoryPeers.findIndex(p => p.id === companyId);
+  const prevCompany = currentIdx > 0 ? categoryPeers[currentIdx - 1] : null;
+  const nextCompany = currentIdx >= 0 && currentIdx < categoryPeers.length - 1 ? categoryPeers[currentIdx + 1] : null;
+
+  // Keyboard navigation
+  const handleKey = useCallback((e: KeyboardEvent) => {
+    if (editOpen || e.metaKey || e.ctrlKey || (e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowLeft' && prevCompany) router.push(`/companies/${prevCompany.id}`);
+    if (e.key === 'ArrowRight' && nextCompany) router.push(`/companies/${nextCompany.id}`);
+    if (e.key === 'Escape') router.push('/companies');
+  }, [prevCompany, nextCompany, editOpen, router]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [handleKey]);
 
   async function toggleWatch() {
     if (!userId || !company) return;
@@ -124,15 +144,65 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
     <div style={{ flex: 1, overflowY: 'auto' }}>
       <div className="page-enter" style={{ padding: '24px 32px 40px', maxWidth: '980px' }}>
 
-        {/* Back */}
-        <Link
-          href="/companies"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#787F85', textDecoration: 'none', marginBottom: '20px', transition: 'color 0.12s' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#EDEEF0')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#787F85')}
-        >
-          <ArrowLeft size={14} /> Back to companies
-        </Link>
+        {/* Back + Prev/Next */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <Link
+            href="/companies"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#787F85', textDecoration: 'none', transition: 'color 0.12s' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#EDEEF0')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#787F85')}
+          >
+            <ArrowLeft size={14} /> Companies
+          </Link>
+
+          {categoryPeers.length > 1 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {currentIdx >= 0 && (
+                <span style={{ fontSize: '11.5px', color: '#5b6066', marginRight: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
+                  {currentIdx + 1} / {categoryPeers.length}
+                </span>
+              )}
+              <Link
+                href={prevCompany ? `/companies/${prevCompany.id}` : '#'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  padding: '5px 10px', borderRadius: '6px', fontSize: '12.5px',
+                  background: prevCompany ? 'rgba(255,255,255,0.05)' : 'transparent',
+                  color: prevCompany ? '#ADB1B8' : '#3a3d43',
+                  border: '1px solid',
+                  borderColor: prevCompany ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+                  textDecoration: 'none', transition: 'all 0.12s',
+                  pointerEvents: prevCompany ? 'auto' : 'none',
+                }}
+                title={prevCompany ? prevCompany.name : ''}
+              >
+                <ChevronLeft size={13} />
+                <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {prevCompany?.name || 'Prev'}
+                </span>
+              </Link>
+              <Link
+                href={nextCompany ? `/companies/${nextCompany.id}` : '#'}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  padding: '5px 10px', borderRadius: '6px', fontSize: '12.5px',
+                  background: nextCompany ? 'rgba(255,255,255,0.05)' : 'transparent',
+                  color: nextCompany ? '#ADB1B8' : '#3a3d43',
+                  border: '1px solid',
+                  borderColor: nextCompany ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+                  textDecoration: 'none', transition: 'all 0.12s',
+                  pointerEvents: nextCompany ? 'auto' : 'none',
+                }}
+                title={nextCompany ? nextCompany.name : ''}
+              >
+                <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {nextCompany?.name || 'Next'}
+                </span>
+                <ChevronRight size={13} />
+              </Link>
+            </div>
+          )}
+        </div>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>

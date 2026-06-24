@@ -1,32 +1,26 @@
 export default function Loading() {
   return (
-    <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Header */}
+    <div style={{ padding: '28px 32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <div>
-        <div className="skeleton" style={{ width: '80px', height: '12px', marginBottom: '8px' }} />
-        <div className="skeleton" style={{ width: '220px', height: '26px', marginBottom: '6px' }} />
-        <div className="skeleton" style={{ width: '340px', height: '13px' }} />
+        <div className="skeleton" style={{ width: '60px', height: '10px', marginBottom: '10px', borderRadius: '4px' }} />
+        <div className="skeleton" style={{ width: '200px', height: '24px', marginBottom: '6px', borderRadius: '6px' }} />
+        <div className="skeleton" style={{ width: '280px', height: '12px', borderRadius: '4px' }} />
       </div>
-      {/* Stat row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} style={{ background: 'var(--card-bg)', border: '0.5px solid var(--border)', borderRadius: '10px', padding: '16px' }}>
-            <div className="skeleton" style={{ width: '60px', height: '11px', marginBottom: '10px' }} />
-            <div className="skeleton" style={{ width: '80px', height: '24px' }} />
-          </div>
-        ))}
-      </div>
-      {/* Card grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-        {[...Array(6)].map((_, i) => (
-          <div key={i} style={{ background: 'var(--card-bg)', border: '0.5px solid var(--border)', borderRadius: '10px', padding: '18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div className="skeleton" style={{ width: '120px', height: '14px' }} />
-              <div className="skeleton" style={{ width: '40px', height: '20px', borderRadius: '99px' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '12px' }}>
+        {[...Array(8)].map((_, i) => (
+          <div key={i} style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '11px', overflow: 'hidden' }}>
+            <div className="skeleton" style={{ height: '3px', borderRadius: 0 }} />
+            <div style={{ padding: '14px 15px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div className="skeleton" style={{ width: '120px', height: '14px', borderRadius: '4px' }} />
+                <div className="skeleton" style={{ width: '14px', height: '14px', borderRadius: '50%' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <div className="skeleton" style={{ width: '36px', height: '20px', borderRadius: '99px' }} />
+                <div className="skeleton" style={{ width: '52px', height: '20px', borderRadius: '99px' }} />
+              </div>
+              <div className="skeleton" style={{ width: '80px', height: '11px', borderRadius: '4px' }} />
             </div>
-            <div className="skeleton" style={{ width: '90px', height: '11px', marginBottom: '8px' }} />
-            <div className="skeleton" style={{ width: '100%', height: '11px', marginBottom: '6px' }} />
-            <div className="skeleton" style={{ width: '70%', height: '11px' }} />
           </div>
         ))}
       </div>
