@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Globe, Linkedin, Briefcase, Heart, MapPin, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Globe, Linkedin, Briefcase, Heart, MapPin, Pencil, Trash2, Users, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 import CompanyEditModal from './CompanyEditModal';
@@ -34,6 +34,41 @@ function fitColor(score: number) {
   return '#F26669';
 }
 
+function countryFlag(country?: string | null): string {
+  if (!country) return '';
+  const map: Record<string, string> = {
+    'UAE': '🇦🇪', 'United Arab Emirates': '🇦🇪',
+    'Saudi Arabia': '🇸🇦', 'KSA': '🇸🇦',
+    'USA': '🇺🇸', 'United States': '🇺🇸',
+    'UK': '🇬🇧', 'United Kingdom': '🇬🇧',
+    'Singapore': '🇸🇬',
+    'France': '🇫🇷',
+    'Germany': '🇩🇪',
+    'Switzerland': '🇨🇭',
+    'Netherlands': '🇳🇱',
+    'Bahrain': '🇧🇭',
+    'Egypt': '🇪🇬',
+    'Nigeria': '🇳🇬',
+    'Kenya': '🇰🇪',
+    'Brazil': '🇧🇷',
+    'India': '🇮🇳',
+    'Hong Kong': '🇭🇰',
+    'Israel': '🇮🇱',
+    'Turkey': '🇹🇷',
+    'Jordan': '🇯🇴',
+    'Pakistan': '🇵🇰',
+    'Malta': '🇲🇹',
+    'Canada': '🇨🇦',
+    'Australia': '🇦🇺',
+    'Japan': '🇯🇵',
+    'South Korea': '🇰🇷',
+    'Poland': '🇵🇱',
+    'Estonia': '🇪🇪',
+    'Lithuania': '🇱🇹',
+  };
+  return map[country] || '';
+}
+
 export default function CompanyDetailClient({ companyId }: { companyId: string }) {
   const router = useRouter();
   const [company, setCompany] = useState<Company | null>(null);
@@ -53,7 +88,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
       if (data.sub_sector) {
         const { data: peers } = await supabase
           .from('companies')
-          .select('id,name,lean_fit_score')
+          .select('id,name,lean_fit_score,region')
           .eq('sub_sector', data.sub_sector)
           .order('lean_fit_score', { ascending: false });
         const allPeers = (peers || []) as Company[];
@@ -78,12 +113,10 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
     });
   }, [companyId]);
 
-  // Prev/next within category
   const currentIdx = categoryPeers.findIndex(p => p.id === companyId);
   const prevCompany = currentIdx > 0 ? categoryPeers[currentIdx - 1] : null;
   const nextCompany = currentIdx >= 0 && currentIdx < categoryPeers.length - 1 ? categoryPeers[currentIdx + 1] : null;
 
-  // Keyboard navigation
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (editOpen || e.metaKey || e.ctrlKey || (e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') return;
     if (e.key === 'ArrowLeft' && prevCompany) router.push(`/companies/${prevCompany.id}`);
@@ -127,9 +160,9 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
 
   if (!company) {
     return (
-      <div style={{ padding: '28px 32px', color: '#787F85' }}>
+      <div style={{ padding: '28px 32px', color: 'var(--text-muted)' }}>
         Company not found.{' '}
-        <Link href="/companies" style={{ color: '#3DD68C', textDecoration: 'none' }}>← Back</Link>
+        <Link href="/companies" style={{ color: 'var(--green)', textDecoration: 'none' }}>← Back</Link>
       </div>
     );
   }
@@ -139,18 +172,19 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
   const fit = company.lean_fit_score || 0;
   const fc = fitColor(fit);
   const functions = (company.recommended_functions || '').split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  const flag = countryFlag(company.country || company.hq);
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
-      <div className="page-enter" style={{ padding: '24px 32px 40px', maxWidth: '980px' }}>
+      <div className="page-enter page-padded" style={{ padding: '24px 32px 40px', maxWidth: '980px' }}>
 
         {/* Back + Prev/Next */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
           <Link
             href="/companies"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#787F85', textDecoration: 'none', transition: 'color 0.12s' }}
-            onMouseEnter={e => (e.currentTarget.style.color = '#FFFFFF')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#787F85')}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 0.12s' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-hi)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
           >
             <ArrowLeft size={14} /> Companies
           </Link>
@@ -158,7 +192,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
           {categoryPeers.length > 1 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               {currentIdx >= 0 && (
-                <span style={{ fontSize: '11.5px', color: '#5b6066', marginRight: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span style={{ fontSize: '11.5px', color: 'var(--text-faint)', marginRight: '6px', fontFamily: "'JetBrains Mono', monospace" }}>
                   {currentIdx + 1} / {categoryPeers.length}
                 </span>
               )}
@@ -167,14 +201,12 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                 style={{
                   display: 'flex', alignItems: 'center', gap: '5px',
                   padding: '5px 10px', borderRadius: '6px', fontSize: '12.5px',
-                  background: prevCompany ? 'rgba(255,255,255,0.05)' : 'transparent',
-                  color: prevCompany ? '#C8CAD0' : '#3a3d43',
-                  border: '1px solid',
-                  borderColor: prevCompany ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+                  background: prevCompany ? 'var(--nav-hover)' : 'transparent',
+                  color: prevCompany ? 'var(--text-mid)' : 'var(--text-faint)',
+                  border: '1px solid', borderColor: prevCompany ? 'var(--border)' : 'transparent',
                   textDecoration: 'none', transition: 'all 0.12s',
                   pointerEvents: prevCompany ? 'auto' : 'none',
                 }}
-                title={prevCompany ? prevCompany.name : ''}
               >
                 <ChevronLeft size={13} />
                 <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -186,14 +218,12 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                 style={{
                   display: 'flex', alignItems: 'center', gap: '5px',
                   padding: '5px 10px', borderRadius: '6px', fontSize: '12.5px',
-                  background: nextCompany ? 'rgba(255,255,255,0.05)' : 'transparent',
-                  color: nextCompany ? '#C8CAD0' : '#3a3d43',
-                  border: '1px solid',
-                  borderColor: nextCompany ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.04)',
+                  background: nextCompany ? 'var(--nav-hover)' : 'transparent',
+                  color: nextCompany ? 'var(--text-mid)' : 'var(--text-faint)',
+                  border: '1px solid', borderColor: nextCompany ? 'var(--border)' : 'transparent',
                   textDecoration: 'none', transition: 'all 0.12s',
                   pointerEvents: nextCompany ? 'auto' : 'none',
                 }}
-                title={nextCompany ? nextCompany.name : ''}
               >
                 <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {nextCompany?.name || 'Next'}
@@ -205,29 +235,40 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
         </div>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', marginBottom: '20px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <div style={{
               width: '52px', height: '52px', borderRadius: '10px', flexShrink: 0,
-              background: `${accent}20`,
-              border: `1px solid ${accent}30`,
+              background: `${accent}20`, border: `1px solid ${accent}30`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: accent, fontSize: '22px', fontWeight: 700,
             }}>
               {company.name[0].toUpperCase()}
             </div>
             <div>
-              <h1 style={{ margin: '0 0 6px', fontSize: '25px', fontWeight: 600, color: '#FFFFFF' }}>{company.name}</h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: '#787F85' }}>
+              <h1 style={{ margin: '0 0 6px', fontSize: '25px', fontWeight: 600, color: 'var(--text-hi)' }}>{company.name}</h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                 {company.sub_sector && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: accent, display: 'inline-block' }} />
                     {company.sub_sector}
                   </span>
                 )}
-                {company.region && (
+                {(company.country || company.hq) && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <MapPin size={12} /> {company.region}
+                    {flag && <span>{flag}</span>}
+                    <MapPin size={12} /> {company.country || company.hq}
+                  </span>
+                )}
+                {company.headcount_range && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Users size={12} /> {company.headcount_range}
+                  </span>
+                )}
+                {company.funding_stage && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <TrendingUp size={12} /> {company.funding_stage}
+                    {company.total_raised ? ` · ${company.total_raised}` : ''}
                   </span>
                 )}
               </div>
@@ -235,20 +276,20 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
           </div>
 
           {/* Right cluster */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, flexWrap: 'wrap' }}>
             <button
               onClick={toggleWatch}
               style={{
                 display: 'flex', alignItems: 'center', gap: '6px',
                 borderRadius: '7px', padding: '8px 14px', fontSize: '13px', fontWeight: 500,
                 cursor: 'pointer', border: '1px solid', transition: 'all 0.12s',
-                background: saved ? 'rgba(61,214,140,0.08)' : 'transparent',
-                color: saved ? '#3DD68C' : '#787F85',
-                borderColor: saved ? 'rgba(61,214,140,0.30)' : 'rgba(255,255,255,0.10)',
+                background: saved ? 'var(--green-10)' : 'transparent',
+                color: saved ? 'var(--green)' : 'var(--text-muted)',
+                borderColor: saved ? 'var(--border-accent)' : 'var(--border)',
               }}
             >
-              <Heart size={15} fill={saved ? '#3DD68C' : 'none'} />
-              {saved ? 'Saved to watchlist' : 'Add to watchlist'}
+              <Heart size={15} fill={saved ? 'var(--green)' : 'none'} />
+              {saved ? 'Saved' : 'Watchlist'}
             </button>
             <span className="tier-pill" style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.border}` }}>
               {company.priority_tier || 'Unranked'}
@@ -256,14 +297,14 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             {fit > 0 && (
               <div style={{ textAlign: 'center' }}>
                 <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 500, color: fc, lineHeight: 1 }}>{fit.toFixed(1)}</p>
-                <p style={{ margin: '2px 0 0', fontSize: '10px', color: '#5b6066' }}>fit score</p>
+                <p style={{ margin: '2px 0 0', fontSize: '10px', color: 'var(--text-faint)' }}>fit score</p>
               </div>
             )}
             <button
               onClick={() => setEditOpen(true)}
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '7px', padding: '8px', cursor: 'pointer', color: '#787F85', display: 'flex', transition: 'all 0.12s' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#787F85'; }}
+              style={{ background: 'var(--nav-hover)', border: '1px solid var(--border)', borderRadius: '7px', padding: '8px', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', transition: 'all 0.12s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-hi)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
             >
               <Pencil size={14} />
             </button>
@@ -271,54 +312,91 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
         </div>
 
         {/* Divider */}
-        <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '0 0 24px' }} />
+        <div style={{ height: '1px', background: 'var(--border)', margin: '0 0 24px' }} />
 
         {/* Two-column body */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginBottom: '32px' }}>
+        <div className="detail-grid" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', marginBottom: '32px' }}>
 
           {/* Left */}
           <div>
-            {company.description && !company.rationale && (
+            {company.description && (
               <div style={{ marginBottom: '20px' }}>
-                <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: '#5b6066', textTransform: 'uppercase', letterSpacing: '0.06em' }}>About</p>
-                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.65', color: '#C8CAD0' }}>{company.description}</p>
+                <p style={{ margin: '0 0 8px', fontSize: '12px', fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>About</p>
+                <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.65', color: 'var(--text-mid)' }}>{company.description}</p>
               </div>
             )}
             {functions.length > 0 && (
-              <div>
-                <p style={{ margin: '0 0 10px', fontSize: '12px', fontWeight: 600, color: '#5b6066', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recommended functions</p>
+              <div style={{ marginBottom: '20px' }}>
+                <p style={{ margin: '0 0 10px', fontSize: '12px', fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recommended functions</p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
                   {functions.map(fn => (
                     <span key={fn} style={{
                       borderRadius: '99px', padding: '4px 12px', fontSize: '12.5px',
-                      background: 'rgba(61,214,140,0.10)', color: '#3DD68C',
-                      border: '1px solid rgba(61,214,140,0.20)',
+                      background: 'var(--green-10)', color: 'var(--green)',
+                      border: '1px solid var(--border-accent)',
                     }}>{fn}</span>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Enrichment stats row */}
+            {(company.headcount_range || company.funding_stage || company.total_raised || company.key_investors || company.founded_year) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginTop: '8px' }}>
+                {company.founded_year && (
+                  <div style={{ padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                    <p style={{ margin: '0 0 3px', fontSize: '10.5px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Founded</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-hi)' }}>{company.founded_year}</p>
+                  </div>
+                )}
+                {company.headcount_range && (
+                  <div style={{ padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                    <p style={{ margin: '0 0 3px', fontSize: '10.5px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Headcount</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-hi)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Users size={13} style={{ color: 'var(--green)' }} /> {company.headcount_range}
+                    </p>
+                  </div>
+                )}
+                {company.funding_stage && (
+                  <div style={{ padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                    <p style={{ margin: '0 0 3px', fontSize: '10.5px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Stage</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-hi)' }}>{company.funding_stage}</p>
+                  </div>
+                )}
+                {company.total_raised && (
+                  <div style={{ padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                    <p style={{ margin: '0 0 3px', fontSize: '10.5px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total raised</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-hi)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <TrendingUp size={13} style={{ color: 'var(--green)' }} /> {company.total_raised}
+                    </p>
+                  </div>
+                )}
+                {company.key_investors && (
+                  <div style={{ padding: '12px 14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', gridColumn: 'span 2' }}>
+                    <p style={{ margin: '0 0 3px', fontSize: '10.5px', color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Key investors</p>
+                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-mid)' }}>{company.key_investors}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Right */}
           <div>
-            <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '16px 18px', marginBottom: '14px' }}>
-              <p style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: 600, color: '#5b6066', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pool details</p>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px 18px', marginBottom: '14px' }}>
+              <p style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pool details</p>
               {[
                 ['Tier', company.priority_tier],
                 ['Fit score', fit > 0 ? `${fit.toFixed(1)} / 10` : null],
                 ['Category', company.sub_sector],
                 ['Region', company.region],
-                ['Country', company.country || company.hq],
-                ['Founded', company.founded_year?.toString()],
-                ['Headcount', company.headcount_range],
-                ['Stage', company.funding_stage],
-                ['Raised', company.total_raised],
-                ['Investors', company.key_investors],
+                ['HQ', company.headquarters || company.country || company.hq],
               ].filter(([, v]) => v).map(([label, value]) => (
                 <div key={label as string} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', gap: '12px' }}>
-                  <span style={{ fontSize: '12.5px', color: '#5b6066', flexShrink: 0 }}>{label}</span>
-                  <span style={{ fontSize: '12.5px', color: '#C8CAD0', textAlign: 'right' }}>{value}</span>
+                  <span style={{ fontSize: '12.5px', color: 'var(--text-faint)', flexShrink: 0 }}>{label}</span>
+                  <span style={{ fontSize: '12.5px', color: 'var(--text-mid)', textAlign: 'right' }}>
+                    {label === 'HQ' && flag ? `${flag} ${value}` : value as string}
+                  </span>
                 </div>
               ))}
             </div>
@@ -336,44 +414,44 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             <TierHistory companyId={company.id} />
 
             {/* Links */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
               {company.website_url && (
                 <a href={company.website_url} target="_blank" rel="noopener noreferrer" style={{
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px', fontSize: '13px', color: '#C8CAD0', textDecoration: 'none',
+                  background: 'var(--nav-hover)', border: '1px solid var(--border)',
+                  borderRadius: '8px', fontSize: '13px', color: 'var(--text-mid)', textDecoration: 'none',
                   transition: 'all 0.12s',
                 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#C8CAD0'; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-accent)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-hi)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-mid)'; }}
                 >
-                  <Globe size={14} style={{ color: '#3DD68C', flexShrink: 0 }} /> Website
+                  <Globe size={14} style={{ color: 'var(--green)', flexShrink: 0 }} /> Website
                 </a>
               )}
               {company.linkedin_company_url && (
                 <a href={company.linkedin_company_url} target="_blank" rel="noopener noreferrer" style={{
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px', fontSize: '13px', color: '#C8CAD0', textDecoration: 'none',
+                  background: 'var(--nav-hover)', border: '1px solid var(--border)',
+                  borderRadius: '8px', fontSize: '13px', color: 'var(--text-mid)', textDecoration: 'none',
                   transition: 'all 0.12s',
                 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#C8CAD0'; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-accent)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-hi)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-mid)'; }}
                 >
-                  <Linkedin size={14} style={{ color: '#3DD68C', flexShrink: 0 }} /> LinkedIn
+                  <Linkedin size={14} style={{ color: 'var(--green)', flexShrink: 0 }} /> LinkedIn
                 </a>
               )}
               {company.careers_url && (
                 <a href={company.careers_url} target="_blank" rel="noopener noreferrer" style={{
                   display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px',
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: '8px', fontSize: '13px', color: '#C8CAD0', textDecoration: 'none',
+                  background: 'var(--nav-hover)', border: '1px solid var(--border)',
+                  borderRadius: '8px', fontSize: '13px', color: 'var(--text-mid)', textDecoration: 'none',
                   transition: 'all 0.12s',
                 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.16)'; (e.currentTarget as HTMLElement).style.color = '#FFFFFF'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = '#C8CAD0'; }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-accent)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-hi)'; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-mid)'; }}
                 >
-                  <Briefcase size={14} style={{ color: '#3DD68C', flexShrink: 0 }} /> Careers
+                  <Briefcase size={14} style={{ color: 'var(--green)', flexShrink: 0 }} /> Careers
                 </a>
               )}
             </div>
@@ -383,8 +461,8 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
         {/* Similar pools */}
         {similar.length > 0 && (
           <>
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '0 0 20px' }} />
-            <p style={{ margin: '0 0 14px', fontSize: '13.5px', fontWeight: 600, color: '#FFFFFF' }}>
+            <div style={{ height: '1px', background: 'var(--border)', margin: '0 0 20px' }} />
+            <p style={{ margin: '0 0 14px', fontSize: '13.5px', fontWeight: 600, color: 'var(--text-hi)' }}>
               Similar pools in {company.sub_sector}
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px' }}>
@@ -397,15 +475,15 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                     href={`/companies/${s.id}`}
                     className="hover-card"
                     style={{
-                      background: '#212329', border: '1px solid rgba(255,255,255,0.07)',
+                      background: 'var(--surface)', border: '1px solid var(--border)',
                       borderRadius: '10px', padding: '14px 16px', textDecoration: 'none',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                       {sfit > 0 && <span className="fit-chip" style={{ background: `${sfc}20`, color: sfc, fontSize: '11px' }}>{sfit.toFixed(1)}</span>}
                     </div>
-                    <p style={{ margin: '0 0 4px', fontSize: '13.5px', fontWeight: 600, color: '#FFFFFF' }}>{s.name}</p>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#787F85' }}>{s.region || '—'}</p>
+                    <p style={{ margin: '0 0 4px', fontSize: '13.5px', fontWeight: 600, color: 'var(--text-hi)' }}>{s.name}</p>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{s.region || '—'}</p>
                   </Link>
                 );
               })}
@@ -413,36 +491,36 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
           </>
         )}
 
-        {/* Candidates + Notes — two column */}
-        <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+        {/* Candidates + Notes */}
+        <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
           <CompanyCandidates companyId={company.id} />
           <CompanyNotes companyId={company.id} />
         </div>
 
         {/* Delete zone */}
-        <div style={{ marginTop: '32px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ marginTop: '32px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
           {!pendingDelete ? (
             <button
               onClick={() => setPendingDelete(true)}
-              style={{ fontSize: '12px', color: '#5b6066', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: 0, transition: 'color 0.12s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#F26669')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#5b6066')}
+              style={{ fontSize: '12px', color: 'var(--text-faint)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: 0, transition: 'color 0.12s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--red)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-faint)')}
             >
               <Trash2 size={13} /> Delete company
             </button>
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '13px', color: '#C8CAD0' }}>Are you sure?</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-mid)' }}>Are you sure?</span>
               <button
                 onClick={deleteCompany}
                 disabled={deleting}
-                style={{ padding: '6px 14px', borderRadius: '6px', background: '#F26669', color: '#fff', border: 'none', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ padding: '6px 14px', borderRadius: '6px', background: 'var(--red)', color: '#fff', border: 'none', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
               <button
                 onClick={() => setPendingDelete(false)}
-                style={{ fontSize: '13px', color: '#787F85', background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ fontSize: '13px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Cancel
               </button>

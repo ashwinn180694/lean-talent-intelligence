@@ -1,14 +1,22 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUp, ArrowDown, Heart, Download, Upload } from 'lucide-react';
+import { ArrowUp, ArrowDown, Heart, Download, Upload, Bookmark, BookmarkCheck, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import type { Company } from '@/lib/types';
 import CsvImportModal from './CsvImportModal';
 
 type SortKey = 'name' | 'sub_sector' | 'region' | 'priority_tier' | 'lean_fit_score';
 type SortDir = 'asc' | 'desc';
+
+interface SavedSearch {
+  name: string;
+  q: string;
+  tier: string;
+  category: string;
+  region: string;
+}
 
 const TIER_ORDER: Record<string, number> = { 'Tier 1': 1, 'Tier 2': 2, 'Tier 3': 3 };
 
@@ -27,17 +35,26 @@ function fitColor(score: number) {
 }
 
 function exportCSV(rows: Company[], filename: string) {
-  const cols = ['name','priority_tier','sub_sector','region','country','lean_fit_score','recommended_functions','website_url','linkedin_company_url'];
-  const headers = ['Company','Tier','Category','Region','Country','Fit','Functions','Website','LinkedIn'];
-  const escape = (v: any) => {
+  const cols = ['name','priority_tier','sub_sector','region','country','lean_fit_score','recommended_functions','website_url','linkedin_company_url','headcount_range','funding_stage','total_raised','headquarters'];
+  const headers = ['Company','Tier','Category','Region','Country','Fit','Functions','Website','LinkedIn','Headcount','Stage','Total Raised','HQ'];
+  const escape = (v: unknown) => {
     const s = String(v ?? '');
     return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  const csv = [headers.join(','), ...rows.map(r => cols.map(c => escape((r as any)[c])).join(','))].join('\n');
+  const csv = [headers.join(','), ...rows.map(r => cols.map(c => escape((r as Record<string, unknown>)[c])).join(','))].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = filename;
   a.click();
+}
+
+const SAVED_SEARCHES_KEY = 'lti-saved-searches';
+
+function loadSavedSearches(): SavedSearch[] {
+  try { return JSON.parse(localStorage.getItem(SAVED_SEARCHES_KEY) || '[]'); } catch { return []; }
+}
+function persistSavedSearches(list: SavedSearch[]) {
+  try { localStorage.setItem(SAVED_SEARCHES_KEY, JSON.stringify(list)); } catch {}
 }
 
 export default function CompaniesGrid({
@@ -62,6 +79,14 @@ export default function CompaniesGrid({
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [importOpen, setImportOpen] = useState(false);
 
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [saveNameInput, setSaveNameInput] = useState('');
+  const [showSaveInput, setShowSaveInput] = useState(false);
+
+  useEffect(() => {
+    setSavedSearches(loadSavedSearches());
+  }, []);
+
   useEffect(() => {
     supabase.from('companies').select('*').then(({ data }) => {
       setCompanies((data || []) as Company[]);
@@ -71,7 +96,7 @@ export default function CompaniesGrid({
       if (!data.user) return;
       setUserId(data.user.id);
       supabase.from('watchlists').select('company_id').eq('user_id', data.user.id).then(({ data: w }) => {
-        setWatchSet(new Set((w || []).map((r: any) => r.company_id)));
+        setWatchSet(new Set((w || []).map((r: { company_id: string }) => r.company_id)));
       });
     });
   }, []);
@@ -90,14 +115,13 @@ export default function CompaniesGrid({
       );
     });
     rows = [...rows].sort((a, b) => {
-      let av: any, bv: any;
+      let av: string | number, bv: string | number;
       if (sortKey === 'lean_fit_score') { av = a.lean_fit_score || 0; bv = b.lean_fit_score || 0; }
       else if (sortKey === 'priority_tier') { av = TIER_ORDER[a.priority_tier || ''] || 99; bv = TIER_ORDER[b.priority_tier || ''] || 99; }
-      else { av = ((a as any)[sortKey] || '').toLowerCase(); bv = ((b as any)[sortKey] || '').toLowerCase(); }
+      else { av = ((a as Record<string, unknown>)[sortKey] as string || '').toLowerCase(); bv = ((b as Record<string, unknown>)[sortKey] as string || '').toLowerCase(); }
       const cmp = av < bv ? -1 : av > bv ? 1 : 0;
       return sortDir === 'asc' ? cmp : -cmp;
     });
-    // Name as tiebreaker
     return rows;
   }, [companies, q, tier, category, region, sortKey, sortDir]);
 
@@ -111,9 +135,9 @@ export default function CompaniesGrid({
   async function toggleWatch(e: React.MouseEvent, companyId: string) {
     e.preventDefault(); e.stopPropagation();
     if (!userId) return;
-    const saved = watchSet.has(companyId);
+    const isSaved = watchSet.has(companyId);
     const next = new Set(watchSet);
-    if (saved) {
+    if (isSaved) {
       next.delete(companyId);
       await supabase.from('watchlists').delete().eq('user_id', userId).eq('company_id', companyId);
     } else {
@@ -123,6 +147,31 @@ export default function CompaniesGrid({
     setWatchSet(next);
   }
 
+  function saveCurrentSearch() {
+    const name = saveNameInput.trim();
+    if (!name) return;
+    const newSearch: SavedSearch = { name, q, tier, category, region };
+    const updated = [...savedSearches.filter(s => s.name !== name), newSearch];
+    setSavedSearches(updated);
+    persistSavedSearches(updated);
+    setSaveNameInput('');
+    setShowSaveInput(false);
+  }
+
+  function applySavedSearch(s: SavedSearch) {
+    setQ(s.q);
+    setTier(s.tier);
+    setCategory(s.category);
+    setRegion(s.region);
+  }
+
+  function deleteSavedSearch(name: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    const updated = savedSearches.filter(s => s.name !== name);
+    setSavedSearches(updated);
+    persistSavedSearches(updated);
+  }
+
   function SortIcon({ k }: { k: SortKey }) {
     if (sortKey !== k) return null;
     return sortDir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />;
@@ -130,7 +179,7 @@ export default function CompaniesGrid({
 
   const thStyle = (k: SortKey): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer',
-    userSelect: 'none', color: sortKey === k ? '#FFFFFF' : '#5b6066',
+    userSelect: 'none', color: sortKey === k ? 'var(--text-hi)' : 'var(--text-faint)',
     fontFamily: "'JetBrains Mono', monospace", fontSize: '10px',
     textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 400,
     transition: 'color 0.12s',
@@ -138,18 +187,18 @@ export default function CompaniesGrid({
 
   return (
     <div style={{ flex: 1, overflowY: 'auto' }}>
-      <div style={{ padding: '28px 32px 40px' }}>
+      <div className="page-padded" style={{ padding: '28px 32px 40px' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <p className="eyebrow" style={{ marginBottom: '4px' }}>Talent universe</p>
-            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Companies</h1>
-            <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#787F85' }}>
+            <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 600, color: 'var(--text-hi)' }}>Companies</h1>
+            <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
               {loading ? 'Loading…' : `${filtered.length} of ${companies.length} companies${hasFilters ? ' · filtered' : ''}`}
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             <button className="btn-secondary" onClick={() => setImportOpen(true)}>
               <Upload size={14} /> Import CSV
             </button>
@@ -158,6 +207,35 @@ export default function CompaniesGrid({
             </button>
           </div>
         </div>
+
+        {/* Saved searches */}
+        {savedSearches.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-faint)', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.08em' }}>Saved:</span>
+            {savedSearches.map(s => (
+              <button
+                key={s.name}
+                onClick={() => applySavedSearch(s)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
+                  borderRadius: '99px', padding: '3px 10px', fontSize: '12px',
+                  background: 'var(--green-10)', color: 'var(--green)',
+                  border: '1px solid var(--border-accent)', cursor: 'pointer',
+                  transition: 'all 0.12s', fontFamily: 'inherit',
+                }}
+              >
+                <BookmarkCheck size={11} />
+                {s.name}
+                <span
+                  onClick={e => deleteSavedSearch(s.name, e)}
+                  style={{ marginLeft: '2px', opacity: 0.6, lineHeight: 1 }}
+                >
+                  <X size={10} />
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Filter bar */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px', marginBottom: '18px' }}>
@@ -169,14 +247,14 @@ export default function CompaniesGrid({
               style={{
                 borderRadius: '99px', padding: '5px 14px', fontSize: '12.5px', fontWeight: 500,
                 cursor: 'pointer', border: '1px solid', transition: 'all 0.12s',
-                background: tier === t ? '#3DD68C' : 'transparent',
-                color: tier === t ? '#0c1f16' : '#787F85',
-                borderColor: tier === t ? '#3DD68C' : 'rgba(255,255,255,0.12)',
+                background: tier === t ? 'var(--green)' : 'transparent',
+                color: tier === t ? 'var(--green-text)' : 'var(--text-muted)',
+                borderColor: tier === t ? 'var(--green)' : 'var(--border)',
               }}
             >{t}</button>
           ))}
 
-          <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.10)', margin: '0 4px' }} />
+          <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 4px' }} />
 
           <select
             className="field-select"
@@ -199,27 +277,68 @@ export default function CompaniesGrid({
           </select>
 
           {hasFilters && (
-            <button
-              onClick={() => { setQ(''); setTier('All'); setCategory(''); setRegion(''); }}
-              style={{ fontSize: '12px', color: '#787F85', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', transition: 'color 0.12s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#FFFFFF')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#787F85')}
-            >
-              Clear ×
-            </button>
+            <>
+              <button
+                onClick={() => { setQ(''); setTier('All'); setCategory(''); setRegion(''); }}
+                style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', transition: 'color 0.12s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-hi)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+              >
+                Clear ×
+              </button>
+              {/* Save search */}
+              {showSaveInput ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <input
+                    autoFocus
+                    value={saveNameInput}
+                    onChange={e => setSaveNameInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') saveCurrentSearch(); if (e.key === 'Escape') setShowSaveInput(false); }}
+                    placeholder="Search name…"
+                    style={{
+                      fontSize: '12px', padding: '4px 9px', borderRadius: '6px',
+                      border: '1px solid var(--border)', background: 'var(--surface)',
+                      color: 'var(--text-hi)', outline: 'none', fontFamily: 'inherit', width: '130px',
+                    }}
+                  />
+                  <button className="btn-primary" style={{ padding: '4px 10px', fontSize: '12px' }} onClick={saveCurrentSearch}>Save</button>
+                  <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '12px' }} onClick={() => setShowSaveInput(false)}>×</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSaveInput(true)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 6px', transition: 'color 0.12s' }}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--green)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                >
+                  <Bookmark size={12} /> Save search
+                </button>
+              )}
+            </>
           )}
         </div>
 
+        {/* Search */}
+        <div style={{ marginBottom: '16px' }}>
+          <input
+            className="field-input"
+            placeholder="Search companies…"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            style={{ maxWidth: '320px', fontSize: '13px', padding: '8px 12px' }}
+          />
+        </div>
+
         {/* Table */}
-        <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '11px', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '11px', overflow: 'hidden' }}>
           {/* Sticky header */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1.7fr 1.5fr 1.2fr 2fr 70px 64px 40px',
             padding: '10px 16px',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            borderBottom: '1px solid var(--border)',
             position: 'sticky', top: 0,
-            background: '#212329', zIndex: 1,
+            background: 'var(--surface)', zIndex: 1,
           }}>
             {([
               ['name', 'Company'],
@@ -242,16 +361,16 @@ export default function CompaniesGrid({
 
           {/* Rows */}
           {loading ? (
-            <div style={{ padding: '48px', textAlign: 'center', color: '#5b6066', fontSize: '13px' }}>Loading…</div>
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>Loading…</div>
           ) : filtered.length === 0 ? (
-            <div style={{ padding: '48px', textAlign: 'center', color: '#5b6066', fontSize: '13px' }}>
+            <div style={{ padding: '48px', textAlign: 'center', color: 'var(--text-faint)', fontSize: '13px' }}>
               No companies match these filters.
             </div>
           ) : filtered.map(c => {
             const tc = tierColors(c.priority_tier || '');
             const fit = c.lean_fit_score || 0;
             const fc = fitColor(fit);
-            const saved = watchSet.has(c.id);
+            const isSaved = watchSet.has(c.id);
             return (
               <Link
                 key={c.id}
@@ -260,13 +379,13 @@ export default function CompaniesGrid({
                 style={{
                   display: 'grid', gridTemplateColumns: '1.7fr 1.5fr 1.2fr 2fr 70px 64px 40px',
                   padding: '11px 16px', alignItems: 'center', textDecoration: 'none',
-                  borderBottom: '1px solid rgba(255,255,255,0.03)',
+                  borderBottom: '1px solid var(--border)',
                 }}
               >
-                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
-                <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.sub_sector || '—'}</span>
-                <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.region || '—'}</span>
-                <span style={{ fontSize: '12px', color: '#5b6066', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>
+                <span style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
+                <span className="table-col-category" style={{ fontSize: '12.5px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.sub_sector || '—'}</span>
+                <span className="table-col-region" style={{ fontSize: '12.5px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.region || '—'}</span>
+                <span className="table-col-functions" style={{ fontSize: '12px', color: 'var(--text-faint)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>
                   {c.recommended_functions || '—'}
                 </span>
                 <span>
@@ -277,16 +396,16 @@ export default function CompaniesGrid({
                 <span>
                   {fit > 0 ? (
                     <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(1)}</span>
-                  ) : <span style={{ color: '#5b6066', fontSize: '12px' }}>—</span>}
+                  ) : <span style={{ color: 'var(--text-faint)', fontSize: '12px' }}>—</span>}
                 </span>
                 <span style={{ display: 'flex', justifyContent: 'center' }}>
                   <button
                     onClick={e => toggleWatch(e, c.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: saved ? '#3DD68C' : '#3a3d43', transition: 'color 0.12s' }}
-                    onMouseEnter={e => { if (!saved) (e.currentTarget as HTMLElement).style.color = '#3DD68C'; }}
-                    onMouseLeave={e => { if (!saved) (e.currentTarget as HTMLElement).style.color = '#3a3d43'; }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', color: isSaved ? 'var(--green)' : 'var(--border)', transition: 'color 0.12s' }}
+                    onMouseEnter={e => { if (!isSaved) (e.currentTarget as HTMLElement).style.color = 'var(--green)'; }}
+                    onMouseLeave={e => { if (!isSaved) (e.currentTarget as HTMLElement).style.color = 'var(--border)'; }}
                   >
-                    <Heart size={15} fill={saved ? '#3DD68C' : 'none'} />
+                    <Heart size={15} fill={isSaved ? 'var(--green)' : 'none'} />
                   </button>
                 </span>
               </Link>

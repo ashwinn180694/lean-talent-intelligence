@@ -5,7 +5,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 /* ════════════════════════════════════════════════
-   DESIGN TOKENS — Lean Market dark theme
+   DESIGN TOKENS — Lean Market dark theme (default)
 ════════════════════════════════════════════════ */
 :root {
   /* App backgrounds */
@@ -61,6 +61,35 @@
   /* Scrollbar */
   --scroll-thumb: rgba(255,255,255,0.10);
   --scroll-hover: rgba(255,255,255,0.18);
+}
+
+/* ════════════════════════════════════════════════
+   LIGHT MODE OVERRIDES
+════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --app-bg:        #F4F5F7;
+  --sb-bg:         #FFFFFF;
+  --surface:       #FFFFFF;
+
+  --green:         #1A9E5E;
+  --green-text:    #FFFFFF;
+  --green-10:      rgba(26,158,94,0.10);
+  --green-12:      rgba(26,158,94,0.12);
+  --green-16:      rgba(26,158,94,0.16);
+
+  --text-hi:       #0D0F12;
+  --text-mid:      #3A3F47;
+  --text-muted:    #6B7280;
+  --text-faint:    #9CA3AF;
+
+  --border:        rgba(0,0,0,0.08);
+  --border-accent: rgba(26,158,94,0.30);
+
+  --row-hover:     rgba(0,0,0,0.03);
+  --nav-hover:     rgba(0,0,0,0.04);
+
+  --scroll-thumb: rgba(0,0,0,0.12);
+  --scroll-hover: rgba(0,0,0,0.20);
 }
 
 /* ════════════════════════════════════════════════
@@ -354,5 +383,73 @@
     background: var(--green-12);
     color: var(--green);
     font-weight: 600;
+  }
+
+  /* ── Mobile sidebar overlay ── */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 99;
+  }
+  .sidebar-overlay.open { display: block; }
+
+  /* ── Mobile hamburger ── */
+  .mobile-topbar {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--sb-bg);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+}
+
+/* ════════════════════════════════════════════════
+   RESPONSIVE — Mobile
+════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+
+  .app-sidebar {
+    position: fixed !important;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.2,0.8,0.2,1);
+    width: 240px !important;
+  }
+
+  .app-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0,0,0,0.4);
+  }
+
+  .mobile-topbar { display: flex !important; }
+
+  .app-main {
+    padding-top: 0;
+  }
+
+  /* Stack company detail columns */
+  .detail-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Full-width table on mobile — hide some columns */
+  .table-col-functions,
+  .table-col-region {
+    display: none !important;
+  }
+
+  /* Reduce padding on mobile */
+  .page-padded {
+    padding: 16px !important;
   }
 }

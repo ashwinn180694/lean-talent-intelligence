@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
-  LayoutDashboard, Building2, Tag, Globe, Star, Heart, LogOut
+  LayoutDashboard, Building2, Tag, Globe, Star, Heart, LogOut, Sun, Moon, Menu, X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import UserAvatar, { type Profile } from './UserAvatar';
@@ -32,17 +32,28 @@ export default function Sidebar({
   const [watchCount, setWatchCount] = useState(0);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [isDark, setIsDark] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    // Read saved theme
+    try {
+      const saved = localStorage.getItem('lti-theme');
+      setIsDark(saved !== 'light');
+    } catch {}
+  }, []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (!data.user) return;
-      // Load watchlist count
       supabase
         .from('watchlists')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', data.user.id)
         .then(({ count }) => setWatchCount(count ?? 0));
-      // Load profile
       supabase
         .from('profiles')
         .select('*')
@@ -55,132 +66,184 @@ export default function Sidebar({
     });
   }, [pathname]);
 
+  function toggleTheme() {
+    const next = !isDark;
+    setIsDark(next);
+    try { localStorage.setItem('lti-theme', next ? 'dark' : 'light'); } catch {}
+    document.documentElement.setAttribute('data-theme', next ? '' : 'light');
+    if (next) document.documentElement.removeAttribute('data-theme');
+  }
+
   const displayLabel = profile?.display_name
     || (email ? email.split('@')[0].replace(/[._-]+/g, ' ') : 'User');
 
-  return (
-    <>
-      <aside style={{
+  const sidebarContent = (
+    <aside
+      className={`app-sidebar${mobileOpen ? ' open' : ''}`}
+      style={{
         display: 'flex', flexDirection: 'column',
         width: '230px', flexShrink: 0,
-        background: '#131417',
-        borderRight: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--sb-bg)',
+        borderRight: '1px solid var(--border)',
         overflowY: 'auto',
+      }}
+    >
+      {/* Brand header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '16px 14px 14px',
+        borderBottom: '1px solid var(--border)',
       }}>
-
-        {/* Brand header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '16px 14px 14px',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
           <div style={{
             width: '31px', height: '31px', borderRadius: '8px',
-            background: '#3DD68C',
+            background: 'var(--green)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#0c1f16', fontSize: '14px', fontWeight: 700, flexShrink: 0,
+            color: 'var(--green-text)', fontSize: '14px', fontWeight: 700, flexShrink: 0,
           }}>L</div>
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              Lean Talent Intelligence
-            </p>
-          </div>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: 'var(--text-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            Lean Talent Intelligence
+          </p>
         </div>
-
-        {/* Nav */}
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '1px', padding: '12px 9px', flex: 1 }}>
-          {NAV.map(({ href, label, icon: Icon, badge }) => {
-            const active = pathname === href || pathname.startsWith(`${href}/`);
-            const showBadge = badge && watchCount > 0;
-            return (
-              <Link
-                key={href}
-                href={href}
-                className="nav-link"
-                data-active={active ? 'true' : undefined}
-                style={{ justifyContent: 'space-between' }}
-              >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
-                  <Icon size={17} style={{ flexShrink: 0 }} />
-                  <span style={{ fontSize: '13px' }}>{label}</span>
-                </span>
-                {showBadge && (
-                  <span style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '10px', fontWeight: 500,
-                    background: 'rgba(61,214,140,0.16)', color: '#3DD68C',
-                    borderRadius: '99px', padding: '1px 7px', lineHeight: '1.6',
-                  }}>
-                    {watchCount}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Sign out */}
-        <div style={{ padding: '0 9px 6px' }}>
-          <button
-            onClick={() => supabase.auth.signOut().then(() => (window.location.href = '/login'))}
-            style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
-              padding: '8px 11px', borderRadius: '7px',
-              fontSize: '13px', color: '#787F85', background: 'transparent',
-              border: 'none', cursor: 'pointer', textAlign: 'left',
-              transition: 'background 0.12s, color 0.12s', fontFamily: 'inherit',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
-              (e.currentTarget as HTMLElement).style.color = '#FFFFFF';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'transparent';
-              (e.currentTarget as HTMLElement).style.color = '#787F85';
-            }}
-          >
-            <LogOut size={17} />
-            Sign out
-          </button>
-        </div>
-
-        {/* User card — click to edit profile */}
+        {/* Theme toggle */}
         <button
-          onClick={() => setShowProfile(true)}
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           style={{
-            margin: '6px 9px 12px',
-            display: 'flex', alignItems: 'center', gap: '10px',
-            borderRadius: '8px', padding: '9px 11px',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            flexShrink: 0, cursor: 'pointer', textAlign: 'left',
-            transition: 'background 0.12s, border-color 0.12s',
-            fontFamily: 'inherit', width: 'calc(100% - 18px)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', padding: '4px', display: 'flex',
+            borderRadius: '5px', transition: 'color 0.12s',
+            flexShrink: 0, marginLeft: '6px',
+          }}
+          onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-hi)')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+        >
+          {isDark ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
+      </div>
+
+      {/* Nav */}
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: '1px', padding: '12px 9px', flex: 1 }}>
+        {NAV.map(({ href, label, icon: Icon, badge }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
+          const showBadge = badge && watchCount > 0;
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="nav-link"
+              data-active={active ? 'true' : undefined}
+              style={{ justifyContent: 'space-between' }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '9px' }}>
+                <Icon size={17} style={{ flexShrink: 0 }} />
+                <span style={{ fontSize: '13px' }}>{label}</span>
+              </span>
+              {showBadge && (
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '10px', fontWeight: 500,
+                  background: 'var(--green-16)', color: 'var(--green)',
+                  borderRadius: '99px', padding: '1px 7px', lineHeight: '1.6',
+                }}>
+                  {watchCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Sign out */}
+      <div style={{ padding: '0 9px 6px' }}>
+        <button
+          onClick={() => supabase.auth.signOut().then(() => (window.location.href = '/login'))}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
+            padding: '8px 11px', borderRadius: '7px',
+            fontSize: '13px', color: 'var(--text-muted)', background: 'transparent',
+            border: 'none', cursor: 'pointer', textAlign: 'left',
+            transition: 'background 0.12s, color 0.12s', fontFamily: 'inherit',
           }}
           onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.13)';
+            (e.currentTarget as HTMLElement).style.background = 'var(--nav-hover)';
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-hi)';
           }}
           onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.07)';
+            (e.currentTarget as HTMLElement).style.background = 'transparent';
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
           }}
         >
-          {profile ? (
-            <UserAvatar profile={profile} size={29} />
-          ) : (
-            <div style={{ width: 29, height: 29, borderRadius: '50%', background: 'rgba(61,214,140,0.15)', flexShrink: 0 }} />
-          )}
-          <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: '12px', fontWeight: 500, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {displayLabel}
-            </p>
-            <p style={{ margin: 0, fontSize: '10.5px', color: '#5b6066', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {profile?.title || title || 'Edit profile'}
-            </p>
-          </div>
+          <LogOut size={17} />
+          Sign out
         </button>
-      </aside>
+      </div>
+
+      {/* User card */}
+      <button
+        onClick={() => setShowProfile(true)}
+        style={{
+          margin: '6px 9px 12px',
+          display: 'flex', alignItems: 'center', gap: '10px',
+          borderRadius: '8px', padding: '9px 11px',
+          background: 'var(--green-10)',
+          border: '1px solid var(--border)',
+          flexShrink: 0, cursor: 'pointer', textAlign: 'left',
+          transition: 'background 0.12s, border-color 0.12s',
+          fontFamily: 'inherit', width: 'calc(100% - 18px)',
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.background = 'var(--green-16)';
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-accent)';
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.background = 'var(--green-10)';
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+        }}
+      >
+        {profile ? (
+          <UserAvatar profile={profile} size={29} />
+        ) : (
+          <div style={{ width: 29, height: 29, borderRadius: '50%', background: 'var(--green-16)', flexShrink: 0 }} />
+        )}
+        <div style={{ minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 500, color: 'var(--text-hi)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {displayLabel}
+          </p>
+          <p style={{ margin: 0, fontSize: '10.5px', color: 'var(--text-faint)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {profile?.title || title || 'Edit profile'}
+          </p>
+        </div>
+      </button>
+    </aside>
+  );
+
+  return (
+    <>
+      {/* Mobile topbar */}
+      <div className="mobile-topbar">
+        <button
+          onClick={() => setMobileOpen(o => !o)}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-hi)', display: 'flex', padding: '4px' }}
+        >
+          {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <div style={{
+          width: '26px', height: '26px', borderRadius: '6px',
+          background: 'var(--green)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--green-text)', fontSize: '12px', fontWeight: 700,
+        }}>L</div>
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-hi)' }}>Lean Talent Intelligence</span>
+      </div>
+
+      {/* Overlay for mobile */}
+      <div
+        className={`sidebar-overlay${mobileOpen ? ' open' : ''}`}
+        onClick={() => setMobileOpen(false)}
+      />
+
+      {sidebarContent}
 
       {showProfile && profile && (
         <ProfileModal
