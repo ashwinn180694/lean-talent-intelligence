@@ -20,6 +20,7 @@ export type Company = {
   awesomefintech_categories?: string | null;
   awesomefintech_rank?: string | null;
   updated_at?: string | null;
+  hq_country?: string | null;
   // Enrichment fields
   description?: string | null;
   founded_year?: number | null;

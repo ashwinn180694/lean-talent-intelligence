@@ -452,4 +452,15 @@
   .page-padded {
     padding: 16px !important;
   }
+
+  /* Companies grid view responsive */
+  .companies-grid-view {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .companies-grid-view {
+    grid-template-columns: 1fr !important;
+  }
 }

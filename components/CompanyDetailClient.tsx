@@ -88,12 +88,12 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
       if (data.sub_sector) {
         const { data: peers } = await supabase
           .from('companies')
-          .select('id,name,lean_fit_score,region')
+          .select('id,name,lean_fit_score,region,headcount_range,funding_stage,hq_country,country,hq,sub_sector,priority_tier')
           .eq('sub_sector', data.sub_sector)
           .order('lean_fit_score', { ascending: false });
         const allPeers = (peers || []) as Company[];
         setCategoryPeers(allPeers);
-        setSimilar(allPeers.filter(p => p.id !== companyId).slice(0, 3));
+        setSimilar(allPeers.filter(p => p.id !== companyId).slice(0, 5));
       }
     }
     setLoading(false);
@@ -465,10 +465,14 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             <p style={{ margin: '0 0 14px', fontSize: '13.5px', fontWeight: 600, color: 'var(--text-hi)' }}>
               Similar pools in {company.sub_sector}
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
               {similar.map(s => {
                 const sfit = s.lean_fit_score || 0;
                 const sfc = fitColor(sfit);
+                const stc = tierColors(s.priority_tier || '');
+                const sAccent = catColor(s.sub_sector);
+                const sFlag = countryFlag(s.hq_country || s.country || s.hq);
+                const sCountry = s.hq_country || s.country || s.hq || '';
                 return (
                   <Link
                     key={s.id}
@@ -477,13 +481,44 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                     style={{
                       background: 'var(--surface)', border: '1px solid var(--border)',
                       borderRadius: '10px', padding: '14px 16px', textDecoration: 'none',
+                      display: 'block',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      {sfit > 0 && <span className="fit-chip" style={{ background: `${sfc}20`, color: sfc, fontSize: '11px' }}>{sfit.toFixed(1)}</span>}
+                    {/* Avatar + fit chip row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <div style={{
+                        width: '28px', height: '28px', borderRadius: '6px', flexShrink: 0,
+                        background: `${sAccent}22`, border: `1px solid ${sAccent}40`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: sAccent, fontSize: '13px', fontWeight: 700,
+                      }}>
+                        {(s.name || '?')[0].toUpperCase()}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {s.priority_tier && (
+                          <span className="tier-pill" style={{ background: stc.bg, color: stc.color, border: `1px solid ${stc.border}`, fontSize: '10px' }}>
+                            {s.priority_tier}
+                          </span>
+                        )}
+                        {sfit > 0 && <span className="fit-chip" style={{ background: `${sfc}20`, color: sfc, fontSize: '11px' }}>{sfit.toFixed(1)}</span>}
+                      </div>
                     </div>
-                    <p style={{ margin: '0 0 4px', fontSize: '13.5px', fontWeight: 600, color: 'var(--text-hi)' }}>{s.name}</p>
-                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{s.region || '—'}</p>
+                    <p style={{ margin: '0 0 6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-hi)', lineHeight: 1.3 }}>{s.name}</p>
+                    {sCountry && (
+                      <p style={{ margin: '0 0 4px', fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                        {sFlag && <span style={{ marginRight: '3px' }}>{sFlag}</span>}{sCountry}
+                      </p>
+                    )}
+                    {s.headcount_range && (
+                      <p style={{ margin: '0 0 4px', fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Users size={11} style={{ color: 'var(--text-faint)' }} /> {s.headcount_range}
+                      </p>
+                    )}
+                    {s.funding_stage && (
+                      <p style={{ margin: 0, fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <TrendingUp size={11} style={{ color: 'var(--text-faint)' }} /> {s.funding_stage}
+                      </p>
+                    )}
                   </Link>
                 );
               })}

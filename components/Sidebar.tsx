@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
-  LayoutDashboard, Building2, Tag, Globe, Star, Heart, LogOut, Sun, Moon, Menu, X
+  LayoutDashboard, Building2, Tag, Globe, Star, Heart, LogOut, Sun, Moon, Menu, X, Map
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase-browser';
 import UserAvatar, { type Profile } from './UserAvatar';
@@ -16,6 +16,7 @@ const NAV = [
   { href: '/categories',  label: 'Categories',  icon: Tag },
   { href: '/geographies', label: 'Geographies', icon: Globe },
   { href: '/tiers',       label: 'Tiers',       icon: Star },
+  { href: '/map',         label: 'Talent Map',  icon: Map },
   { href: '/watchlist',   label: 'Watchlist',   icon: Heart, badge: true },
 ];
 
