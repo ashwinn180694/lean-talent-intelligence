@@ -105,7 +105,7 @@ export default function CompanyCard({ company, initialWatched }: { company: Comp
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           {fit > 0 && (
             <span className="fit-chip" style={{ background: fc.bg, color: fc.color, fontSize: '11px' }}>
-              {fit.toFixed(2)}
+              {fit.toFixed(1)}
             </span>
           )}
           {company.priority_tier && tc && (

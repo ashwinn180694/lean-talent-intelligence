@@ -74,7 +74,7 @@ export default async function GeographiesPage() {
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', marginTop: '6px', gap: '8px' }}>
                     <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-hi)' }}>{name}</p>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '14px', color: accent }}>{avgFit.toFixed(2)}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '14px', color: accent }}>{avgFit.toFixed(1)}</span>
                   </div>
 
                   <div style={{ marginBottom: '10px' }}>

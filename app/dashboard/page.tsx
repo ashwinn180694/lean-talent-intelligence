@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   const tier3 = companies.filter(c => c.priority_tier === 'Tier 3');
   const highFit = companies.filter(c => (c.lean_fit_score || 0) >= 8);
   const avgFitScore = total > 0
-    ? (companies.reduce((s, c) => s + (c.lean_fit_score || 0), 0) / total).toFixed(2)
+    ? (companies.reduce((s, c) => s + (c.lean_fit_score || 0), 0) / total).toFixed(1)
     : '0.0';
 
   // Category breakdown
@@ -47,7 +47,7 @@ export default async function DashboardPage() {
     .map(([name, cos], i) => ({
       name,
       count: cos.length,
-      avgFit: cos.length > 0 ? (cos.reduce((s, c) => s + (c.lean_fit_score || 0), 0) / cos.length).toFixed(2) : '0.0',
+      avgFit: cos.length > 0 ? (cos.reduce((s, c) => s + (c.lean_fit_score || 0), 0) / cos.length).toFixed(1) : '0.0',
       color: CAT_PALETTE[i % CAT_PALETTE.length],
     }));
 
@@ -174,7 +174,7 @@ export default async function DashboardPage() {
                     </span>
                   </span>
                   <span style={{ textAlign: 'right' }}>
-                    <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(2)}</span>
+                    <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(1)}</span>
                   </span>
                 </Link>
               );

@@ -68,7 +68,7 @@ export default async function CategoriesPage() {
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 500, color: 'var(--text-hi)' }}>{total}</span>
                       <span style={{ fontSize: '12px', color: '#5b6066', marginLeft: '5px' }}>companies</span>
                     </div>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '16px', fontWeight: 500, color: accent }}>{avgFit.toFixed(2)}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '16px', fontWeight: 500, color: accent }}>{avgFit.toFixed(1)}</span>
                   </div>
 
                   <div style={{ display: 'flex', height: '5px', borderRadius: '99px', overflow: 'hidden', marginBottom: '12px', background: 'var(--border)' }}>

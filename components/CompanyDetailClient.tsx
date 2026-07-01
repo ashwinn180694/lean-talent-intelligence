@@ -296,7 +296,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
             </span>
             {fit > 0 && (
               <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 500, color: fc, lineHeight: 1 }}>{fit.toFixed(2)}</p>
+                <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: '22px', fontWeight: 500, color: fc, lineHeight: 1 }}>{fit.toFixed(1)}</p>
                 <p style={{ margin: '2px 0 0', fontSize: '10px', color: 'var(--text-faint)' }}>fit score</p>
               </div>
             )}
@@ -387,7 +387,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
               <p style={{ margin: '0 0 12px', fontSize: '12px', fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pool details</p>
               {[
                 ['Tier', company.priority_tier],
-                ['Fit score', fit > 0 ? `${fit.toFixed(2)} / 10` : null],
+                ['Fit score', fit > 0 ? `${fit.toFixed(1)} / 10` : null],
                 ['Category', company.sub_sector],
                 ['Region', company.region],
                 ['HQ', company.headquarters || company.country || company.hq],
@@ -500,7 +500,7 @@ export default function CompanyDetailClient({ companyId }: { companyId: string }
                             {s.priority_tier}
                           </span>
                         )}
-                        {sfit > 0 && <span className="fit-chip" style={{ background: `${sfc}20`, color: sfc, fontSize: '11px' }}>{sfit.toFixed(2)}</span>}
+                        {sfit > 0 && <span className="fit-chip" style={{ background: `${sfc}20`, color: sfc, fontSize: '11px' }}>{sfit.toFixed(1)}</span>}
                       </div>
                     </div>
                     <p style={{ margin: '0 0 6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-hi)', lineHeight: 1.3 }}>{s.name}</p>
