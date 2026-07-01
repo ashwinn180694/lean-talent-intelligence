@@ -239,7 +239,7 @@ export default function MapClient() {
               <p style={{ margin: '0 0 2px', fontSize: '12px', color: 'var(--text-muted)' }}>{tooltip.count} {tooltip.count === 1 ? 'company' : 'companies'}</p>
               {tooltip.avgFit > 0 && (
                 <p style={{ margin: 0, fontSize: '11.5px', color: 'var(--green)', fontFamily: "'JetBrains Mono', monospace" }}>
-                  avg fit {tooltip.avgFit.toFixed(1)}
+                  avg fit {tooltip.avgFit.toFixed(2)}
                 </p>
               )}
             </div>
@@ -274,7 +274,7 @@ export default function MapClient() {
               </span>
               {selectedGroup.avgFit > 0 && (
                 <span style={{ fontSize: '12px', fontFamily: "'JetBrains Mono', monospace", color: 'var(--green)' }}>
-                  avg fit {selectedGroup.avgFit.toFixed(1)}
+                  avg fit {selectedGroup.avgFit.toFixed(2)}
                 </span>
               )}
               <button
@@ -324,7 +324,7 @@ export default function MapClient() {
                         </span>
                       )}
                       {fit > 0 && (
-                        <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(1)}</span>
+                        <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(2)}</span>
                       )}
                     </Link>
                   );

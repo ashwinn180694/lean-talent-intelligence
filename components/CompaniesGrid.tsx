@@ -523,7 +523,7 @@ export default function CompaniesGrid({
                     onMouseLeave={() => setHoveredFitId(null)}
                   >
                     {fit > 0 ? (
-                      <span className="fit-chip" style={{ background: fc.bg, color: fc.color, cursor: 'default' }}>{fit.toFixed(1)}</span>
+                      <span className="fit-chip" style={{ background: fc.bg, color: fc.color, cursor: 'default' }}>{fit.toFixed(2)}</span>
                     ) : <span style={{ color: 'var(--text-faint)', fontSize: '12px' }}>—</span>}
                     {hoveredFitId === c.id && c.fit_breakdown && Object.keys(c.fit_breakdown).length > 0 && (
                       <FitTooltip bd={c.fit_breakdown} />
@@ -631,7 +631,7 @@ export default function CompaniesGrid({
                             </span>
                           )}
                           {fit > 0 && (
-                            <span className="fit-chip" style={{ background: fc.bg, color: fc.color, fontSize: '11px' }}>{fit.toFixed(1)}</span>
+                            <span className="fit-chip" style={{ background: fc.bg, color: fc.color, fontSize: '11px' }}>{fit.toFixed(2)}</span>
                           )}
                         </div>
 

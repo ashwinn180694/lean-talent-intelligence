@@ -84,7 +84,7 @@ export default async function TiersPage() {
                     <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
                       {[
                         { label: 'companies', value: cos.length },
-                        { label: 'avg fit', value: avgFit.toFixed(1), colored: true },
+                        { label: 'avg fit', value: avgFit.toFixed(2), colored: true },
                         { label: 'categories', value: cats },
                       ].map(({ label, value, colored }) => (
                         <div key={label}>
@@ -122,7 +122,7 @@ export default async function TiersPage() {
                             <p style={{ margin: 0, fontSize: '11px', color: '#5b6066' }}>{c.region || '—'}</p>
                           </div>
                           {fit > 0 && (
-                            <span className="fit-chip" style={{ background: fc.bg, color: fc.color, fontSize: '11px', flexShrink: 0 }}>{fit.toFixed(1)}</span>
+                            <span className="fit-chip" style={{ background: fc.bg, color: fc.color, fontSize: '11px', flexShrink: 0 }}>{fit.toFixed(2)}</span>
                           )}
                         </Link>
                       );

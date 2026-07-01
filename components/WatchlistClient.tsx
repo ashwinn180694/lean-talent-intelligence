@@ -36,7 +36,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
 
   const tier1 = companies.filter(c => c.priority_tier === 'Tier 1').length;
   const avgFit = companies.length > 0
-    ? (companies.reduce((s, c) => s + (c.lean_fit_score || 0), 0) / companies.length).toFixed(1)
+    ? (companies.reduce((s, c) => s + (c.lean_fit_score || 0), 0) / companies.length).toFixed(2)
     : '0.0';
 
   async function removeFromWatch(companyId: string) {
@@ -128,7 +128,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
                 </span>
                 <span>
                   {fit > 0
-                    ? <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(1)}</span>
+                    ? <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(2)}</span>
                     : <span style={{ color: '#5b6066', fontSize: '12px' }}>—</span>}
                 </span>
                 <span style={{ display: 'flex', justifyContent: 'center' }}>
