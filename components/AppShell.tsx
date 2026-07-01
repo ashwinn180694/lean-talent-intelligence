@@ -1,6 +1,7 @@
 import { createSupabaseServer } from '@/lib/supabase-server';
 import Sidebar from './Sidebar';
 import GlobalSearch from './GlobalSearch';
+import AIChatPanel from './AIChatPanel';
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = createSupabaseServer();
@@ -41,6 +42,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
           {children}
         </div>
       </main>
+      <AIChatPanel />
     </div>
   );
 }
