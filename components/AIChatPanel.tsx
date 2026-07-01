@@ -20,10 +20,9 @@ export default function AIChatPanel() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [streaming, setStreaming] = useState(false);
+  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (open && inputRef.current) inputRef.current.focus();
@@ -31,63 +30,72 @@ export default function AIChatPanel() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streaming]);
+  }, [messages]);
 
   async function send(text?: string) {
     const content = (text ?? input).trim();
-    if (!content || streaming) return;
+    if (!content || loading) return;
     setInput('');
 
-    const next: Message[] = [...messages, { role: 'user', content }];
-    setMessages(next);
-    setStreaming(true);
-
-    // Add empty assistant message to stream into
-    setMessages(m => [...m, { role: 'assistant', content: '' }]);
+    const userMsg: Message = { role: 'user', content };
+    const next = [...messages, userMsg];
+    setMessages([...next, { role: 'assistant', content: '' }]);
+    setLoading(true);
 
     try {
-      abortRef.current = new AbortController();
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: next }),
-        signal: abortRef.current.signal,
       });
 
-      if (!res.ok || !res.body) throw new Error('Request failed');
+      const data = await res.json();
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = '';
+      if (!res.ok || data.error) {
+        setMessages(m => {
+          const u = [...m];
+          u[u.length - 1] = { role: 'assistant', content: `Error: ${data.error || 'Something went wrong'}` };
+          return u;
+        });
+        return;
+      }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
+      // Typewriter effect
+      const reply: string = data.reply;
+      let i = 0;
+      const tick = () => {
+        i += 3; // chars per tick
         setMessages(m => {
-          const updated = [...m];
-          updated[updated.length - 1] = { role: 'assistant', content: accumulated };
-          return updated;
+          const u = [...m];
+          u[u.length - 1] = { role: 'assistant', content: reply.slice(0, i) };
+          return u;
         });
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.name !== 'AbortError') {
-        setMessages(m => {
-          const updated = [...m];
-          updated[updated.length - 1] = { role: 'assistant', content: 'Something went wrong. Please try again.' };
-          return updated;
-        });
-      }
+        if (i < reply.length) requestAnimationFrame(tick);
+        else {
+          setMessages(m => {
+            const u = [...m];
+            u[u.length - 1] = { role: 'assistant', content: reply };
+            return u;
+          });
+        }
+      };
+      requestAnimationFrame(tick);
+
+    } catch {
+      setMessages(m => {
+        const u = [...m];
+        u[u.length - 1] = { role: 'assistant', content: 'Failed to reach the server. Check your connection.' };
+        return u;
+      });
     } finally {
-      setStreaming(false);
+      setLoading(false);
     }
   }
 
   function reset() {
-    abortRef.current?.abort();
     setMessages([]);
     setInput('');
-    setStreaming(false);
+    setLoading(false);
   }
 
   function handleKey(e: React.KeyboardEvent) {
@@ -120,34 +128,30 @@ export default function AIChatPanel() {
           transition: 'all 0.2s cubic-bezier(0.2,0.8,0.2,1)',
           color: open ? 'var(--text-muted)' : 'var(--green-text)',
         }}
-        onMouseEnter={e => { if (!open) (e.currentTarget as HTMLElement).style.filter = 'brightness(1.1)'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.filter = ''; }}
       >
         {open ? <X size={18} /> : <Sparkles size={18} />}
       </button>
 
       {/* Panel */}
       {open && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '84px',
-            right: '24px',
-            zIndex: 199,
-            width: '380px',
-            maxWidth: 'calc(100vw - 48px)',
-            height: '520px',
-            maxHeight: 'calc(100vh - 120px)',
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: '16px',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            animation: 'panelIn 0.18s cubic-bezier(0.2,0.8,0.2,1) both',
-          }}
-        >
+        <div style={{
+          position: 'fixed',
+          bottom: '84px',
+          right: '24px',
+          zIndex: 199,
+          width: '380px',
+          maxWidth: 'calc(100vw - 48px)',
+          height: '520px',
+          maxHeight: 'calc(100vh - 120px)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
+          borderRadius: '16px',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          animation: 'panelIn 0.18s cubic-bezier(0.2,0.8,0.2,1) both',
+        }}>
           {/* Header */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -175,10 +179,8 @@ export default function AIChatPanel() {
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
                   color: 'var(--text-muted)', display: 'flex', padding: '4px',
-                  borderRadius: '5px', transition: 'color 0.12s',
+                  borderRadius: '5px',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-hi)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
               >
                 <RotateCcw size={14} />
               </button>
@@ -227,38 +229,32 @@ export default function AIChatPanel() {
               </div>
             ) : (
               messages.map((m, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex',
-                    justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start',
-                  }}
-                >
-                  <div
-                    style={{
-                      maxWidth: '88%',
-                      padding: '9px 13px',
-                      borderRadius: m.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
-                      background: m.role === 'user' ? 'var(--green)' : 'var(--app-bg)',
-                      color: m.role === 'user' ? 'var(--green-text)' : 'var(--text-hi)',
-                      fontSize: '13px',
-                      lineHeight: '1.55',
-                      border: m.role === 'assistant' ? '1px solid var(--border)' : 'none',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                  >
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '88%',
+                    padding: '9px 13px',
+                    borderRadius: m.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+                    background: m.role === 'user' ? 'var(--green)' : 'var(--app-bg)',
+                    color: m.role === 'user' ? 'var(--green-text)' : 'var(--text-hi)',
+                    fontSize: '13px',
+                    lineHeight: '1.55',
+                    border: m.role === 'assistant' ? '1px solid var(--border)' : 'none',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}>
                     {m.content || (
-                      <span style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '2px 0' }}>
-                        {[0,1,2].map(j => (
-                          <span key={j} style={{
-                            width: '5px', height: '5px', borderRadius: '50%',
-                            background: 'var(--text-faint)',
-                            animation: `dotPulse 1.2s ease-in-out ${j * 0.2}s infinite`,
-                            display: 'inline-block',
-                          }} />
-                        ))}
-                      </span>
+                      loading && i === messages.length - 1 ? (
+                        <span style={{ display: 'flex', gap: '3px', alignItems: 'center', padding: '2px 0' }}>
+                          {[0, 1, 2].map(j => (
+                            <span key={j} style={{
+                              width: '5px', height: '5px', borderRadius: '50%',
+                              background: 'var(--text-faint)',
+                              animation: `dotPulse 1.2s ease-in-out ${j * 0.2}s infinite`,
+                              display: 'inline-block',
+                            }} />
+                          ))}
+                        </span>
+                      ) : null
                     )}
                   </div>
                 </div>
@@ -280,7 +276,7 @@ export default function AIChatPanel() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
               placeholder="Ask anything about your companies…"
-              disabled={streaming}
+              disabled={loading}
               style={{
                 flex: 1, background: 'var(--app-bg)', border: '1px solid var(--border)',
                 borderRadius: '8px', padding: '8px 12px', fontSize: '13px',
@@ -292,15 +288,15 @@ export default function AIChatPanel() {
             />
             <button
               onClick={() => send()}
-              disabled={!input.trim() || streaming}
+              disabled={!input.trim() || loading}
               style={{
-                width: '34px', height: '34px', borderRadius: '8px',
-                background: input.trim() && !streaming ? 'var(--green)' : 'var(--app-bg)',
+                width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0,
+                background: input.trim() && !loading ? 'var(--green)' : 'var(--app-bg)',
                 border: '1px solid var(--border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: input.trim() && !streaming ? 'pointer' : 'not-allowed',
-                color: input.trim() && !streaming ? 'var(--green-text)' : 'var(--text-faint)',
-                transition: 'all 0.15s', flexShrink: 0,
+                cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
+                color: input.trim() && !loading ? 'var(--green-text)' : 'var(--text-faint)',
+                transition: 'all 0.15s',
               }}
             >
               <Send size={14} />
