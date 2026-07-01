@@ -2,60 +2,137 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase-server';
 import Groq from 'groq-sdk';
 
-const SYSTEM_PROMPT = `You are a talent intelligence assistant for Lean Technologies, a fintech infrastructure company operating across MENA and globally.
+type Company = {
+  name: string;
+  priority_tier: string | null;
+  sub_sector: string | null;
+  region: string | null;
+  hq_country: string | null;
+  country: string | null;
+  lean_fit_score: number | null;
+  recommended_functions: string | null;
+  headcount_range: string | null;
+  funding_stage: string | null;
+  total_raised: string | null;
+  founded_year: number | null;
+};
 
-You have access to Lean's curated universe of fintech companies — these are target companies for talent sourcing and competitive intelligence.
+// Keyword-based pre-filter — only send relevant companies to Groq
+function filterRelevant(companies: Company[], question: string): Company[] {
+  const q = question.toLowerCase();
 
-Your job:
-- Answer questions about companies in the universe (tiers, sectors, regions, funding, headcount, fit scores)
-- Help identify the best companies to source talent from for a given role or function
-- Highlight patterns, gaps, or trends across the portfolio
-- Generate concise company briefings on request
+  let pool = [...companies];
 
+  // Tier filter
+  const tierMatch = q.match(/tier\s*([123])/);
+  if (tierMatch) pool = pool.filter(c => c.priority_tier === `Tier ${tierMatch[1]}`);
+
+  // Sector filter
+  const sectors: Record<string, string[]> = {
+    'Payments':               ['payment'],
+    'Crypto / Digital Assets':['crypto','blockchain','defi','web3','digital asset'],
+    'Stablecoin':             ['stablecoin','stable coin'],
+    'Neobank':                ['neobank','neo bank','digital bank'],
+    'Remittance':             ['remittance','money transfer','cross-border'],
+    'RegTech':                ['regtech','compliance','kyc','aml'],
+    'Open Banking':           ['open banking'],
+    'Lending':                ['lending','credit','loan'],
+    'Insurance':              ['insurance','insurtech'],
+    'WealthTech':             ['wealth','wealthtech'],
+    'BaaS':                   ['baas','banking as a service'],
+  };
+  for (const [sector, kws] of Object.entries(sectors)) {
+    if (kws.some(k => q.includes(k))) {
+      const match = pool.filter(c => c.sub_sector === sector);
+      if (match.length >= 3) { pool = match; break; }
+    }
+  }
+
+  // Country / region filter
+  const geoMap: Record<string, string[]> = {
+    'UAE':          ['uae','dubai','abu dhabi'],
+    'Saudi Arabia': ['saudi','ksa','riyadh'],
+    'GCC':          ['gcc','gulf'],
+    'UK':           ['uk','london','britain'],
+    'USA':          ['usa','united states',' us '],
+    'Singapore':    ['singapore'],
+    'Egypt':        ['egypt','cairo'],
+    'India':        ['india'],
+    'France':       ['france','paris'],
+    'Germany':      ['germany'],
+  };
+  for (const [geo, kws] of Object.entries(geoMap)) {
+    if (kws.some(k => q.includes(k))) {
+      const match = pool.filter(c =>
+        (c.hq_country || c.country || '').toLowerCase().includes(geo.toLowerCase()) ||
+        (c.region || '').toLowerCase().includes(geo.toLowerCase())
+      );
+      if (match.length >= 3) { pool = match; break; }
+    }
+  }
+
+  // Fit score filter
+  const fitMatch = q.match(/fit\s*(?:score\s*)?[≥>=]+\s*(\d+)/);
+  if (fitMatch) {
+    const min = parseFloat(fitMatch[1]);
+    const match = pool.filter(c => (c.lean_fit_score || 0) >= min);
+    if (match.length >= 3) pool = match;
+  }
+
+  // Stage filter
+  if (q.includes('series a')) pool = pool.filter(c => c.funding_stage?.toLowerCase().includes('series a'));
+  else if (q.includes('series b')) pool = pool.filter(c => c.funding_stage?.toLowerCase().includes('series b'));
+  else if (q.includes('series c')) pool = pool.filter(c => c.funding_stage?.toLowerCase().includes('series c'));
+  else if (/\bpublic\b|ipo/.test(q)) pool = pool.filter(c => c.funding_stage?.toLowerCase().includes('public'));
+
+  // Named company — include it regardless
+  const named = companies.filter(c => q.includes(c.name.toLowerCase()));
+  const nameSet = new Set(named.map(c => c.name));
+  pool = [...named, ...pool.filter(c => !nameSet.has(c.name))];
+
+  // If too few results, broaden to top 60 by fit
+  if (pool.length < 8) pool = companies.slice(0, 60);
+
+  // Hard cap at 70 companies (~2k tokens)
+  return pool.slice(0, 70);
+}
+
+const SYSTEM_PROMPT = `You are a talent intelligence assistant for Lean Technologies (fintech infra, MENA + global).
+You have a curated universe of target companies for talent sourcing.
 Rules:
-- Only reference companies that appear in the data provided. Never invent companies.
-- Be concise. Use bullet points for lists of companies.
-- When listing companies, include their tier and fit score where relevant.
-- Fit score is out of 10. Score ≥8 is high-fit, ≥6 is good, <6 is low.
-- Priority tiers: Tier 1 = strategic priority, Tier 2 = active watch, Tier 3 = monitor.
-- When asked about a specific role or function, recommend companies where that function appears in recommended_functions, or where the sector aligns.
-
-Today's date: ${new Date().toISOString().split('T')[0]}`;
+- Only reference companies in the data. Never invent companies.
+- Be concise. Use bullet points for lists.
+- Fit score /10: ≥8 high-fit, ≥6 good, <6 low.
+- Tiers: 1=strategic, 2=active watch, 3=monitor.
+- CSV fields: name,tier,sector,region,country,fit,headcount,stage,raised,functions`;
 
 export async function POST(req: NextRequest) {
   try {
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: 'GROQ_API_KEY is not configured. Add it to your Netlify environment variables.' }, { status: 500 });
+      return NextResponse.json({ error: 'GROQ_API_KEY not configured in environment variables.' }, { status: 500 });
     }
 
-    // Auth check
     const supabase = createSupabaseServer();
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const body = await req.json();
-    const { messages } = body;
+    const { messages } = await req.json();
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    // Fetch company data
     const { data: companies, error: dbError } = await supabase
       .from('companies')
-      .select('name, priority_tier, sub_sector, region, hq_country, country, lean_fit_score, recommended_functions, headcount_range, funding_stage, total_raised, founded_year')
+      .select('name,priority_tier,sub_sector,region,hq_country,country,lean_fit_score,recommended_functions,headcount_range,funding_stage,total_raised,founded_year')
       .order('lean_fit_score', { ascending: false });
 
-    if (dbError) {
-      console.error('DB error:', dbError);
-      return NextResponse.json({ error: 'Failed to load company data' }, { status: 500 });
-    }
+    if (dbError) return NextResponse.json({ error: 'Failed to load company data' }, { status: 500 });
 
-    // Ultra-compact CSV to minimise tokens
-    const csvHeader = 'name,tier,sector,region,country,fit,headcount,stage,raised,functions';
-    const csvRows = (companies || []).map(c => [
+    const lastUserMsg = [...messages].reverse().find((m: { role: string }) => m.role === 'user')?.content || '';
+    const relevant = filterRelevant((companies || []) as Company[], lastUserMsg);
+
+    const csvRows = relevant.map(c => [
       c.name,
       c.priority_tier || '',
       c.sub_sector || '',
@@ -67,20 +144,17 @@ export async function POST(req: NextRequest) {
       c.total_raised || '',
       (c.recommended_functions || '').replace(/,/g, ';'),
     ].join(','));
-    const companyContext = csvHeader + '\n' + csvRows.join('\n');
+
+    const context = `name,tier,sector,region,country,fit,headcount,stage,raised,functions\n${csvRows.join('\n')}`;
 
     const groq = new Groq({ apiKey });
-
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
-        {
-          role: 'system',
-          content: `${SYSTEM_PROMPT}\n\nCOMPANY UNIVERSE (CSV format):\n${companyContext}`,
-        },
+        { role: 'system', content: `${SYSTEM_PROMPT}\n\nDATA (${relevant.length} companies):\n${context}` },
         ...messages,
       ],
-      max_tokens: 1024,
+      max_tokens: 800,
       temperature: 0.4,
       stream: false,
     });
@@ -89,7 +163,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ reply });
 
   } catch (err: unknown) {
-    console.error('Chat API error:', err);
+    console.error('Chat error:', err);
     const message = err instanceof Error ? err.message : 'Internal server error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
