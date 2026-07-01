@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     // Fetch company data
     const { data: companies, error: dbError } = await supabase
       .from('companies')
-      .select('name, priority_tier, sub_sector, region, country, hq_country, lean_fit_score, recommended_functions, headcount_range, funding_stage, total_raised, founded_year, headquarters, rationale')
+      .select('name, priority_tier, sub_sector, region, hq_country, country, lean_fit_score, recommended_functions, headcount_range, funding_stage, total_raised, founded_year')
       .order('lean_fit_score', { ascending: false });
 
     if (dbError) {
@@ -53,30 +53,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to load company data' }, { status: 500 });
     }
 
-    const companyContext = (companies || []).map(c => ({
-      name: c.name,
-      tier: c.priority_tier,
-      sector: c.sub_sector,
-      region: c.region,
-      country: c.hq_country || c.country,
-      fit: c.lean_fit_score,
-      functions: c.recommended_functions,
-      headcount: c.headcount_range,
-      stage: c.funding_stage,
-      raised: c.total_raised,
-      founded: c.founded_year,
-      hq: c.headquarters,
-      rationale: c.rationale,
-    }));
+    // Strip nulls to minimise token count
+    const companyContext = (companies || []).map(c => {
+      const obj: Record<string, unknown> = {
+        n: c.name,
+        t: c.priority_tier,
+        s: c.sub_sector,
+        r: c.region,
+        c: c.hq_country || c.country,
+        f: c.lean_fit_score,
+      };
+      if (c.recommended_functions) obj.fn = c.recommended_functions;
+      if (c.headcount_range) obj.hc = c.headcount_range;
+      if (c.funding_stage) obj.st = c.funding_stage;
+      if (c.total_raised) obj.tr = c.total_raised;
+      if (c.founded_year) obj.yr = c.founded_year;
+      return obj;
+    });
 
     const groq = new Groq({ apiKey });
 
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'llama-3.1-8b-instant',
       messages: [
         {
           role: 'system',
-          content: `${SYSTEM_PROMPT}\n\nCOMPANY UNIVERSE (${companyContext.length} companies):\n${JSON.stringify(companyContext)}`,
+          content: `${SYSTEM_PROMPT}\n\nCOMPANY UNIVERSE (${companyContext.length} companies). Field key: n=name, t=tier, s=sector, r=region, c=country, f=fit score, fn=functions, hc=headcount, st=stage, tr=total raised, yr=founded year.\n${JSON.stringify(companyContext)}`,
         },
         ...messages,
       ],
