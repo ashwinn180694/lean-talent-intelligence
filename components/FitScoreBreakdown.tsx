@@ -73,7 +73,7 @@ export default function FitScoreBreakdown({ companyId, overallFit, fitBreakdown,
               <div key={key}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <div>
-                    <span style={{ fontSize: '12.5px', color: '#FFFFFF', fontWeight: 500 }}>{label}</span>
+                    <span style={{ fontSize: '12.5px', color: 'var(--text-hi)', fontWeight: 500 }}>{label}</span>
                     {!editing && <span style={{ fontSize: '11px', color: '#5b6066', marginLeft: '6px' }}>{description}</span>}
                   </div>
                   {editing ? (
@@ -82,8 +82,8 @@ export default function FitScoreBreakdown({ companyId, overallFit, fitBreakdown,
                       value={val || ''}
                       onChange={e => setScores(s => ({ ...s, [key]: parseFloat(e.target.value) || 0 }))}
                       style={{
-                        width: '52px', background: '#1B1B1F', border: '1px solid rgba(255,255,255,0.10)',
-                        borderRadius: '5px', color: '#FFFFFF', fontSize: '12px', padding: '3px 6px',
+                        width: '52px', background: 'var(--app-bg)', border: '1px solid var(--border)',
+                        borderRadius: '5px', color: 'var(--text-hi)', fontSize: '12px', padding: '3px 6px',
                         fontFamily: "'JetBrains Mono', monospace", textAlign: 'center', outline: 'none',
                       }}
                     />
@@ -97,7 +97,7 @@ export default function FitScoreBreakdown({ companyId, overallFit, fitBreakdown,
                   )}
                 </div>
                 {!editing && val > 0 && (
-                  <div style={{ height: '3px', borderRadius: '99px', background: 'rgba(255,255,255,0.06)' }}>
+                  <div style={{ height: '3px', borderRadius: '99px', background: 'var(--border)' }}>
                     <div style={{ width: `${(val / 10) * 100}%`, height: '100%', background: color, borderRadius: '99px', transition: 'width 0.3s' }} />
                   </div>
                 )}

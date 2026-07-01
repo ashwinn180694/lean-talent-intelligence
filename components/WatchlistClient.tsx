@@ -49,10 +49,10 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div className="page-enter" style={{ padding: '28px 32px 40px' }}>
           <p className="eyebrow" style={{ marginBottom: '6px' }}>Saved for sourcing</p>
-          <h1 style={{ margin: '0 0 32px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Watchlist</h1>
+          <h1 style={{ margin: '0 0 32px', fontSize: '24px', fontWeight: 600, color: 'var(--text-hi)' }}>Watchlist</h1>
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            padding: '64px 24px', border: '1px dashed rgba(255,255,255,0.10)',
+            padding: '64px 24px', border: '1px dashed var(--border)',
             borderRadius: '12px', textAlign: 'center', gap: '12px',
           }}>
             <div style={{
@@ -62,7 +62,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
             }}>
               <Heart size={24} style={{ color: '#3DD68C' }} />
             </div>
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#FFFFFF' }}>No companies saved yet</p>
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-hi)' }}>No companies saved yet</p>
             <p style={{ margin: 0, fontSize: '13px', color: '#787F85', maxWidth: '300px' }}>
               Browse the companies list and click the heart icon to save companies to your watchlist.
             </p>
@@ -81,7 +81,7 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div>
             <p className="eyebrow" style={{ marginBottom: '6px' }}>Saved for sourcing</p>
-            <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Watchlist</h1>
+            <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: 'var(--text-hi)' }}>Watchlist</h1>
             <p style={{ margin: 0, fontSize: '13px', color: '#787F85' }}>
               {companies.length} companies saved · {tier1} Tier 1 · avg fit {avgFit}
             </p>
@@ -92,11 +92,11 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
         </div>
 
         {/* Table */}
-        <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '11px', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '11px', overflow: 'hidden' }}>
           {/* Header */}
           <div style={{
             display: 'grid', gridTemplateColumns: '1.7fr 1.5fr 1.2fr 70px 64px 44px',
-            padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)',
+            padding: '10px 16px', borderBottom: '1px solid var(--border)',
             fontFamily: "'JetBrains Mono', monospace", fontSize: '10px',
             textTransform: 'uppercase', letterSpacing: '0.08em', color: '#5b6066',
           }}>
@@ -115,10 +115,10 @@ export default function WatchlistClient({ companies: initial, userId }: { compan
                 style={{
                   display: 'grid', gridTemplateColumns: '1.7fr 1.5fr 1.2fr 70px 64px 44px',
                   padding: '11px 16px', alignItems: 'center', textDecoration: 'none',
-                  borderBottom: '1px solid rgba(255,255,255,0.03)',
+                  borderBottom: '1px solid var(--border)',
                 }}
               >
-                <span style={{ fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
+                <span style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.name}</span>
                 <span style={{ fontSize: '12.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{c.sub_sector || '—'}</span>
                 <span style={{ fontSize: '12.5px', color: '#787F85', paddingRight: '8px' }}>{c.region || '—'}</span>
                 <span>

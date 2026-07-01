@@ -60,8 +60,8 @@ export default function CompanyCard({ company, initialWatched }: { company: Comp
       className="hover-card"
       style={{
         display: 'flex', flexDirection: 'column',
-        background: '#212329',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'var(--surface)',
+        border: '1px solid var(--border)',
         borderRadius: '11px',
         textDecoration: 'none',
         overflow: 'hidden',
@@ -83,7 +83,7 @@ export default function CompanyCard({ company, initialWatched }: { company: Comp
 
         {/* Header row: name + heart */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
-          <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: '#FFFFFF', lineHeight: 1.35, flex: 1, minWidth: 0 }}>
+          <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600, color: 'var(--text-hi)', lineHeight: 1.35, flex: 1, minWidth: 0 }}>
             {company.name}
           </p>
           <button

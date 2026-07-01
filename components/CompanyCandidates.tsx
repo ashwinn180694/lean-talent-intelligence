@@ -159,11 +159,11 @@ export default function CompanyCandidates({ companyId }: { companyId: string }) 
       {/* Add form */}
       {addOpen && (
         <form onSubmit={addCandidate} style={{
-          background: '#1B1B1F', border: '1px solid rgba(61,214,140,0.20)',
+          background: 'var(--app-bg)', border: '1px solid rgba(61,214,140,0.20)',
           borderRadius: '10px', padding: '16px', marginBottom: '14px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF' }}>New candidate</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-hi)' }}>New candidate</span>
             <button type="button" onClick={() => setAddOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#787F85', display: 'flex' }}>
               <X size={15} />
             </button>
@@ -224,7 +224,7 @@ export default function CompanyCandidates({ companyId }: { companyId: string }) 
             const expanded = expandedId === c.id;
             return (
               <div key={c.id} style={{
-                background: '#1B1B1F', border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--app-bg)', border: '1px solid var(--border)',
                 borderRadius: '9px', overflow: 'hidden',
               }}>
                 <div
@@ -240,7 +240,7 @@ export default function CompanyCandidates({ companyId }: { companyId: string }) 
                     {initials(c.name)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF' }}>{c.name}</p>
+                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: 'var(--text-hi)' }}>{c.name}</p>
                     {c.current_position && <p style={{ margin: 0, fontSize: '12px', color: '#787F85' }}>{c.current_position}</p>}
                   </div>
                   {/* Stage selector */}
@@ -262,7 +262,7 @@ export default function CompanyCandidates({ companyId }: { companyId: string }) 
                 </div>
 
                 {expanded && (
-                  <div style={{ padding: '0 13px 12px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ padding: '0 13px 12px', borderTop: '1px solid var(--border)' }}>
                     <div style={{ paddingTop: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {c.linkedin_url && (
                         <a href={c.linkedin_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: '#46B8D8', textDecoration: 'none' }}>

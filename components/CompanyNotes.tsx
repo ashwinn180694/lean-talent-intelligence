@@ -26,7 +26,7 @@ function timeAgo(iso: string) {
 function NoteContent({ content, profiles }: { content: string; profiles: Profile[] }) {
   const parts = content.split(/(@\w[\w.]*)/g);
   return (
-    <p style={{ margin: 0, fontSize: '13px', color: '#FFFFFF', lineHeight: '1.55', whiteSpace: 'pre-wrap' }}>
+    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-hi)', lineHeight: '1.55', whiteSpace: 'pre-wrap' }}>
       {parts.map((part, i) => {
         if (part.startsWith('@')) {
           const name = part.slice(1).toLowerCase();
@@ -184,14 +184,14 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
       {/* Add note */}
       <form onSubmit={addNote} style={{ marginBottom: '16px', position: 'relative' }}>
         <div style={{
-          background: '#1B1B1F', border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--app-bg)', border: '1px solid var(--border)',
           borderRadius: '9px', overflow: 'visible',
           transition: 'border-color 0.12s',
         }}
           onFocusCapture={e => (e.currentTarget.style.borderColor = 'rgba(61,214,140,0.35)')}
           onBlurCapture={e => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+              e.currentTarget.style.borderColor = 'var(--border)';
             }
           }}
         >
@@ -204,13 +204,13 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
             rows={3}
             style={{
               width: '100%', background: 'transparent', border: 'none', outline: 'none',
-              padding: '10px 12px', fontSize: '13px', color: '#FFFFFF',
+              padding: '10px 12px', fontSize: '13px', color: 'var(--text-hi)',
               fontFamily: 'inherit', resize: 'none', lineHeight: '1.5', boxSizing: 'border-box',
             }}
           />
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-            padding: '6px 10px', borderTop: '1px solid rgba(255,255,255,0.05)',
+            padding: '6px 10px', borderTop: '1px solid var(--border)',
           }}>
             <button
               type="submit"
@@ -228,7 +228,7 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
         {mentionSuggestions.length > 0 && (
           <div style={{
             position: 'absolute', bottom: '100%', left: 0, marginBottom: '6px',
-            background: '#212329', border: '1px solid rgba(255,255,255,0.12)',
+            background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: '9px', overflow: 'hidden',
             boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
             zIndex: 50, minWidth: '220px',
@@ -242,12 +242,12 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
                   width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
                   padding: '9px 12px', background: i === selectedSuggestion ? 'rgba(61,214,140,0.08)' : 'transparent',
                   border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
-                  borderBottom: i < mentionSuggestions.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                  borderBottom: i < mentionSuggestions.length - 1 ? '1px solid var(--border)' : 'none',
                 }}
               >
                 <UserAvatar profile={p} size={24} />
                 <div>
-                  <p style={{ margin: 0, fontSize: '12.5px', fontWeight: 500, color: '#FFFFFF' }}>
+                  <p style={{ margin: 0, fontSize: '12.5px', fontWeight: 500, color: 'var(--text-hi)' }}>
                     {p.display_name || p.email.split('@')[0]}
                   </p>
                   <p style={{ margin: 0, fontSize: '11px', color: '#5b6066' }}>{p.email}</p>
@@ -272,7 +272,7 @@ export default function CompanyNotes({ companyId }: { companyId: string }) {
             const displayName = authorProfile.display_name || note.author_email?.split('@')[0].replace(/[._-]+/g, ' ') || 'Team member';
             return (
               <div key={note.id} style={{
-                background: '#1B1B1F', border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--app-bg)', border: '1px solid var(--border)',
                 borderRadius: '9px', padding: '11px 13px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '7px' }}>

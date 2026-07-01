@@ -54,11 +54,11 @@ export default function ProfileModal({
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '14px', width: '100%', maxWidth: '380px', padding: '24px' }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', width: '100%', maxWidth: '380px', padding: '24px' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-          <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#FFFFFF' }}>Your profile</h2>
+          <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-hi)' }}>Your profile</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#787F85', padding: '4px', borderRadius: '6px', display: 'flex' }}>
             <X size={16} />
           </button>
@@ -68,7 +68,7 @@ export default function ProfileModal({
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
           <UserAvatar profile={preview} size={48} />
           <div>
-            <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#FFFFFF' }}>{name || profile.email}</p>
+            <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-hi)' }}>{name || profile.email}</p>
             <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#787F85' }}>{profile.email}</p>
           </div>
         </div>
@@ -81,9 +81,9 @@ export default function ProfileModal({
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="Your name"
-              style={{ width: '100%', background: '#1B1B1F', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', color: '#FFFFFF', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--app-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', color: 'var(--text-hi)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
               onFocus={e => { e.target.style.borderColor = '#3DD68C'; e.target.style.boxShadow = '0 0 0 3px rgba(61,214,140,0.10)'; }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
+              onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
 
@@ -93,9 +93,9 @@ export default function ProfileModal({
               value={title}
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g. Talent Partner"
-              style={{ width: '100%', background: '#1B1B1F', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', color: '#FFFFFF', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              style={{ width: '100%', background: 'var(--app-bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '9px 12px', fontSize: '13.5px', color: 'var(--text-hi)', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
               onFocus={e => { e.target.style.borderColor = '#3DD68C'; e.target.style.boxShadow = '0 0 0 3px rgba(61,214,140,0.10)'; }}
-              onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
+              onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
             />
           </div>
 
@@ -127,7 +127,7 @@ export default function ProfileModal({
 
         {/* Footer */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: '7px', background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', color: '#787F85', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: '7px', background: 'transparent', border: '1px solid var(--border)', color: '#787F85', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit' }}>
             Cancel
           </button>
           <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', borderRadius: '7px', background: '#3DD68C', border: 'none', color: '#0c1f16', fontSize: '13px', fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>

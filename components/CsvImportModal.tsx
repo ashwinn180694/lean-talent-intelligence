@@ -139,8 +139,8 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#1B1B1F', borderRadius: '14px',
-          border: '1px solid rgba(255,255,255,0.07)',
+          background: 'var(--app-bg)', borderRadius: '14px',
+          border: '1px solid var(--border)',
           width: '100%', maxWidth: '580px',
           animation: 'modalIn 0.26s cubic-bezier(0.2,0.8,0.2,1)',
           boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
@@ -148,11 +148,11 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
         }}
       >
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p className="eyebrow" style={{ marginBottom: '4px' }}>Bulk import</p>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#FFFFFF' }}>Import companies from CSV</h2>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'var(--text-hi)' }}>Import companies from CSV</h2>
             </div>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#787F85', cursor: 'pointer', display: 'flex' }}>
               <X size={18} />
@@ -185,7 +185,7 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(61,214,140,0.25)'; (e.currentTarget as HTMLElement).style.background = 'rgba(61,214,140,0.03)'; }}
               >
                 <Upload size={28} style={{ color: '#3DD68C', marginBottom: '10px' }} />
-                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: '#FFFFFF' }}>Click to upload or drag & drop</p>
+                <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 500, color: 'var(--text-hi)' }}>Click to upload or drag & drop</p>
                 <p style={{ margin: 0, fontSize: '12px', color: '#5b6066' }}>CSV files only</p>
                 <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
               </div>
@@ -203,14 +203,14 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
               </div>
 
               {/* Preview table */}
-              <div style={{ background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', maxHeight: '280px', overflowY: 'auto' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(headers.length, 4)}, 1fr)`, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)', background: '#1B1B1F', position: 'sticky', top: 0 }}>
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', maxHeight: '280px', overflowY: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(headers.length, 4)}, 1fr)`, padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--app-bg)', position: 'sticky', top: 0 }}>
                   {headers.slice(0, 4).map(h => (
                     <span key={h} style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.07em', color: '#5b6066' }}>{h}</span>
                   ))}
                 </div>
                 {rows.slice(0, 10).map((row, i) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(headers.length, 4)}, 1fr)`, padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div key={i} style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(headers.length, 4)}, 1fr)`, padding: '8px 12px', borderBottom: '1px solid var(--border)' }}>
                     {headers.slice(0, 4).map(h => (
                       <span key={h} style={{ fontSize: '12.5px', color: '#C8CAD0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '8px' }}>{row[h] || '—'}</span>
                     ))}
@@ -239,7 +239,7 @@ export default function CsvImportModal({ onClose, onDone }: { onClose: () => voi
                   { label: 'Updated', value: updated, color: '#46B8D8' },
                   { label: 'Errors', value: errors, color: errors > 0 ? '#F26669' : '#5b6066' },
                 ].map(({ label, value, color }) => (
-                  <div key={label} style={{ flex: 1, background: '#212329', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+                  <div key={label} style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
                     <p style={{ margin: '0 0 3px', fontFamily: "'JetBrains Mono', monospace", fontSize: '24px', fontWeight: 500, color }}>{value}</p>
                     <p style={{ margin: 0, fontSize: '12px', color: '#787F85' }}>{label}</p>
                   </div>

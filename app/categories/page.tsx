@@ -35,8 +35,8 @@ export default async function CategoriesPage() {
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div className="page-enter" style={{ padding: '28px 32px 40px' }}>
           <p className="eyebrow" style={{ marginBottom: '6px' }}>Market structure</p>
-          <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: '#FFFFFF' }}>Categories</h1>
-          <p style={{ margin: '0 0 24px', fontSize: '13px', color: '#787F85' }}>
+          <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600, color: 'var(--text-hi)' }}>Categories</h1>
+          <p style={{ margin: '0 0 24px', fontSize: '13px', color: 'var(--text-muted)' }}>
             {cats.length} talent categories · tinted by sector, bar shows tier mix
           </p>
 
@@ -50,7 +50,7 @@ export default async function CategoriesPage() {
                   className="hover-card"
                   style={{
                     display: 'block', textDecoration: 'none', position: 'relative', overflow: 'hidden',
-                    background: '#212329', border: '1px solid rgba(255,255,255,0.07)',
+                    background: 'var(--surface)', border: '1px solid var(--border)',
                     borderRadius: '11px', padding: '17px 18px 16px',
                     ['--card-accent' as any]: `${accent}60`,
                   }}
@@ -59,19 +59,19 @@ export default async function CategoriesPage() {
                   <div style={{ position: 'absolute', top: 0, right: 0, width: '80px', height: '80px', pointerEvents: 'none', background: `radial-gradient(circle at top right, ${accent}24, transparent 68%)` }} />
 
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', marginTop: '6px' }}>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#FFFFFF' }}>{name}</p>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-hi)' }}>{name}</p>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '10.5px', background: `${topTierColor}20`, color: topTierColor, borderRadius: '99px', padding: '2px 8px' }}>{topTier}</span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <div>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 500, color: '#FFFFFF' }}>{total}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '26px', fontWeight: 500, color: 'var(--text-hi)' }}>{total}</span>
                       <span style={{ fontSize: '12px', color: '#5b6066', marginLeft: '5px' }}>companies</span>
                     </div>
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '16px', fontWeight: 500, color: accent }}>{avgFit.toFixed(1)}</span>
                   </div>
 
-                  <div style={{ display: 'flex', height: '5px', borderRadius: '99px', overflow: 'hidden', marginBottom: '12px', background: 'rgba(255,255,255,0.06)' }}>
+                  <div style={{ display: 'flex', height: '5px', borderRadius: '99px', overflow: 'hidden', marginBottom: '12px', background: 'var(--border)' }}>
                     {total > 0 && <>
                       <div style={{ width: `${(t1/total)*100}%`, background: '#3DD68C' }} />
                       <div style={{ width: `${(t2/total)*100}%`, background: '#46B8D8' }} />

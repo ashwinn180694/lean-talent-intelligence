@@ -96,8 +96,8 @@ export default function GlobalSearch() {
         height: '56px', flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 24px', gap: '16px',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
-        background: '#1B1B1F',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--app-bg)',
       }}>
         {/* Search trigger */}
         <button
@@ -105,20 +105,20 @@ export default function GlobalSearch() {
           style={{
             display: 'flex', alignItems: 'center', gap: '8px',
             flex: 1, maxWidth: '440px',
-            background: '#212329', border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: '8px', padding: '8px 12px',
             fontSize: '13px', color: '#5b6066', cursor: 'pointer',
             fontFamily: 'inherit', transition: 'border-color 0.12s', textAlign: 'left',
           }}
-          onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)')}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+          onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-accent)')}
+          onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}
         >
           <Search size={14} style={{ flexShrink: 0, color: '#5b6066' }} />
           <span style={{ flex: 1 }}>Search companies, categories, regions…</span>
           <kbd style={{
             fontFamily: "'JetBrains Mono', monospace", fontSize: '10px', color: '#5b6066',
-            background: 'rgba(255,255,255,0.05)', borderRadius: '4px',
-            border: '1px solid rgba(255,255,255,0.08)', padding: '1px 6px',
+            background: 'var(--nav-hover)', borderRadius: '4px',
+            border: '1px solid var(--border)', padding: '1px 6px',
           }}>⌘K</kbd>
         </button>
 
@@ -156,15 +156,15 @@ export default function GlobalSearch() {
           }}
         >
           <div style={{
-            background: '#1B1B1F', borderRadius: '12px',
-            border: '1px solid rgba(255,255,255,0.07)',
+            background: 'var(--app-bg)', borderRadius: '12px',
+            border: '1px solid var(--border)',
             width: '100%', maxWidth: '520px', overflow: 'hidden',
             animation: 'modalIn 0.26s cubic-bezier(0.2,0.8,0.2,1)',
             boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
           }}>
             <div style={{
               display: 'flex', alignItems: 'center', gap: '10px',
-              borderBottom: '1px solid rgba(255,255,255,0.07)', padding: '12px 16px',
+              borderBottom: '1px solid var(--border)', padding: '12px 16px',
             }}>
               <Search size={15} style={{ color: '#5b6066', flexShrink: 0 }} />
               <input
@@ -174,7 +174,7 @@ export default function GlobalSearch() {
                 placeholder="Search Plaid, Payments, UAE…"
                 style={{
                   flex: 1, background: 'transparent', fontSize: '14px',
-                  color: '#FFFFFF', border: 'none', outline: 'none', fontFamily: 'inherit',
+                  color: 'var(--text-hi)', border: 'none', outline: 'none', fontFamily: 'inherit',
                 }}
               />
               <button onClick={() => setOpen(false)} style={{ color: '#5b6066', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px' }}>
@@ -202,7 +202,7 @@ export default function GlobalSearch() {
                     borderRadius: '8px', padding: '9px 10px', textDecoration: 'none',
                     transition: 'background 0.1s',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--row-hover)')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                 >
                   <span style={{
@@ -213,7 +213,7 @@ export default function GlobalSearch() {
                     <Building2 size={15} />
                   </span>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.title}</p>
+                    <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 500, color: 'var(--text-hi)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.title}</p>
                     <p style={{ margin: 0, fontSize: '11.5px', color: '#787F85', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hit.sub}</p>
                   </div>
                 </Link>
@@ -238,18 +238,18 @@ export default function GlobalSearch() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#1B1B1F', borderRadius: '14px',
-              border: '1px solid rgba(255,255,255,0.07)',
+              background: 'var(--app-bg)', borderRadius: '14px',
+              border: '1px solid var(--border)',
               width: '100%', maxWidth: '540px',
               animation: 'modalIn 0.26s cubic-bezier(0.2,0.8,0.2,1)',
               boxShadow: '0 24px 70px rgba(0,0,0,0.55)',
             }}
           >
             {/* Header */}
-            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--border)' }}>
               <p className="eyebrow" style={{ marginBottom: '4px' }}>New talent pool</p>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#FFFFFF' }}>Add company</h2>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: 'var(--text-hi)' }}>Add company</h2>
                 <button onClick={() => setAddOpen(false)} style={{ background: 'none', border: 'none', color: '#787F85', cursor: 'pointer', display: 'flex' }}>
                   <X size={18} />
                 </button>
@@ -299,7 +299,7 @@ export default function GlobalSearch() {
                           cursor: 'pointer', border: '1px solid',
                           background: form.tier === t ? '#3DD68C' : 'transparent',
                           color: form.tier === t ? '#0c1f16' : '#787F85',
-                          borderColor: form.tier === t ? '#3DD68C' : 'rgba(255,255,255,0.10)',
+                          borderColor: form.tier === t ? '#3DD68C' : 'var(--border)',
                           transition: 'all 0.12s',
                         }}
                       >{t}</button>
