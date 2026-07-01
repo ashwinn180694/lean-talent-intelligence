@@ -53,32 +53,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to load company data' }, { status: 500 });
     }
 
-    // Strip nulls to minimise token count
-    const companyContext = (companies || []).map(c => {
-      const obj: Record<string, unknown> = {
-        n: c.name,
-        t: c.priority_tier,
-        s: c.sub_sector,
-        r: c.region,
-        c: c.hq_country || c.country,
-        f: c.lean_fit_score,
-      };
-      if (c.recommended_functions) obj.fn = c.recommended_functions;
-      if (c.headcount_range) obj.hc = c.headcount_range;
-      if (c.funding_stage) obj.st = c.funding_stage;
-      if (c.total_raised) obj.tr = c.total_raised;
-      if (c.founded_year) obj.yr = c.founded_year;
-      return obj;
-    });
+    // Ultra-compact CSV to minimise tokens
+    const csvHeader = 'name,tier,sector,region,country,fit,headcount,stage,raised,functions';
+    const csvRows = (companies || []).map(c => [
+      c.name,
+      c.priority_tier || '',
+      c.sub_sector || '',
+      c.region || '',
+      c.hq_country || c.country || '',
+      c.lean_fit_score ?? '',
+      c.headcount_range || '',
+      c.funding_stage || '',
+      c.total_raised || '',
+      (c.recommended_functions || '').replace(/,/g, ';'),
+    ].join(','));
+    const companyContext = csvHeader + '\n' + csvRows.join('\n');
 
     const groq = new Groq({ apiKey });
 
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'system',
-          content: `${SYSTEM_PROMPT}\n\nCOMPANY UNIVERSE (${companyContext.length} companies). Field key: n=name, t=tier, s=sector, r=region, c=country, f=fit score, fn=functions, hc=headcount, st=stage, tr=total raised, yr=founded year.\n${JSON.stringify(companyContext)}`,
+          content: `${SYSTEM_PROMPT}\n\nCOMPANY UNIVERSE (CSV format):\n${companyContext}`,
         },
         ...messages,
       ],

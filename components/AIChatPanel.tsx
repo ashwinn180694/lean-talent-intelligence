@@ -169,7 +169,7 @@ export default function AIChatPanel() {
               </div>
               <div>
                 <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--text-hi)' }}>Talent Assistant</p>
-                <p style={{ margin: 0, fontSize: '10.5px', color: 'var(--text-faint)' }}>Powered by Llama 3.1 · Groq</p>
+                <p style={{ margin: 0, fontSize: '10.5px', color: 'var(--text-faint)' }}>Powered by Llama 3.3 · Groq</p>
               </div>
             </div>
             {messages.length > 0 && (
