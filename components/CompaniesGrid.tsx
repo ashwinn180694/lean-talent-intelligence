@@ -8,6 +8,75 @@ import type { Company } from '@/lib/types';
 import CsvImportModal from './CsvImportModal';
 
 type SortKey = 'name' | 'sub_sector' | 'region' | 'priority_tier' | 'lean_fit_score';
+
+const FIT_DIMS = [
+  { key: 'culture_fit',     short: 'Culture'   },
+  { key: 'growth_stage',    short: 'Stage'     },
+  { key: 'function_overlap',short: 'Functions' },
+  { key: 'geo_relevance',   short: 'Geo'       },
+  { key: 'talent_density',  short: 'Talent'    },
+];
+
+function dimColor(v: number) {
+  if (v >= 9) return '#3DD68C';
+  if (v >= 7) return '#9AB654';
+  if (v >= 5) return '#D6A35C';
+  return '#F26669';
+}
+
+/** Inline 5-bar breakdown — used in grid cards */
+function FitBreakdownBars({ bd }: { bd: Record<string, number> | null | undefined }) {
+  if (!bd || Object.keys(bd).length === 0) return null;
+  return (
+    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      {FIT_DIMS.map(({ key, short }) => {
+        const val = bd[key] || 0;
+        const color = dimColor(val);
+        return (
+          <div key={key}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--text-faint)' }}>{short}</span>
+              <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", color, fontWeight: 600 }}>{val}</span>
+            </div>
+            <div style={{ height: '2px', borderRadius: '99px', background: 'var(--border)' }}>
+              <div style={{ width: `${val * 10}%`, height: '100%', background: color, borderRadius: '99px' }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Hover tooltip — used in table rows */
+function FitTooltip({ bd }: { bd: Record<string, number> }) {
+  return (
+    <div style={{
+      position: 'absolute', bottom: 'calc(100% + 6px)', right: 0, zIndex: 50,
+      background: 'var(--surface)', border: '1px solid var(--border)',
+      borderRadius: '9px', padding: '10px 12px', width: '160px',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+      display: 'flex', flexDirection: 'column', gap: '6px',
+    }}>
+      <span style={{ fontSize: '10px', fontFamily: "'JetBrains Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)', marginBottom: '2px' }}>Score breakdown</span>
+      {FIT_DIMS.map(({ key, short }) => {
+        const val = bd[key] || 0;
+        const color = dimColor(val);
+        return (
+          <div key={key}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+              <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>{short}</span>
+              <span style={{ fontSize: '10.5px', fontFamily: "'JetBrains Mono', monospace", color, fontWeight: 600 }}>{val}</span>
+            </div>
+            <div style={{ height: '2px', borderRadius: '99px', background: 'var(--border)' }}>
+              <div style={{ width: `${val * 10}%`, height: '100%', background: color, borderRadius: '99px' }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 type SortDir = 'asc' | 'desc';
 
 interface SavedSearch {
@@ -97,6 +166,7 @@ export default function CompaniesGrid({
     return 'table';
   });
 
+  const [hoveredFitId, setHoveredFitId] = useState<string | null>(null);
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [saveNameInput, setSaveNameInput] = useState('');
   const [showSaveInput, setShowSaveInput] = useState(false);
@@ -448,10 +518,16 @@ export default function CompaniesGrid({
                       {c.priority_tier || '—'}
                     </span>
                   </span>
-                  <span>
+                  <span style={{ position: 'relative' }}
+                    onMouseEnter={() => setHoveredFitId(c.id)}
+                    onMouseLeave={() => setHoveredFitId(null)}
+                  >
                     {fit > 0 ? (
-                      <span className="fit-chip" style={{ background: fc.bg, color: fc.color }}>{fit.toFixed(1)}</span>
+                      <span className="fit-chip" style={{ background: fc.bg, color: fc.color, cursor: 'default' }}>{fit.toFixed(1)}</span>
                     ) : <span style={{ color: 'var(--text-faint)', fontSize: '12px' }}>—</span>}
+                    {hoveredFitId === c.id && c.fit_breakdown && Object.keys(c.fit_breakdown).length > 0 && (
+                      <FitTooltip bd={c.fit_breakdown} />
+                    )}
                   </span>
                   <span style={{ display: 'flex', justifyContent: 'center' }}>
                     <button
@@ -594,6 +670,14 @@ export default function CompaniesGrid({
                               }}>{fn}</span>
                             ))}
                           </div>
+                        )}
+
+                        {/* Fit breakdown bars */}
+                        {c.fit_breakdown && Object.keys(c.fit_breakdown).length > 0 && (
+                          <>
+                            <div style={{ height: '1px', background: 'var(--border)', margin: '10px 0 0' }} />
+                            <FitBreakdownBars bd={c.fit_breakdown} />
+                          </>
                         )}
                       </div>
                     </Link>
