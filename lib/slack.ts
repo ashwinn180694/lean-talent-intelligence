@@ -1,12 +1,8 @@
 const WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
 
-type SlackPayload = {
-  text?: string;
-  blocks?: object[];
-};
-
-export async function postToSlack(payload: SlackPayload) {
-  if (!WEBHOOK_URL) return; // Silently skip if not configured
+// Supports both Slack Workflow Builder webhooks and standard incoming webhooks
+export async function postToSlack(payload: { text: string }) {
+  if (!WEBHOOK_URL) return;
   try {
     await fetch(WEBHOOK_URL, {
       method: 'POST',
@@ -27,20 +23,10 @@ export function tierChangeMessage(params: {
 }) {
   const { companyName, oldTier, newTier, changerEmail, companyUrl } = params;
   const tierEmoji: Record<string, string> = { 'Tier 1': '🟢', 'Tier 2': '🔵', 'Tier 3': '⚫' };
+  const from = oldTier ? `${tierEmoji[oldTier] || '⚫'} ${oldTier}` : 'Unranked';
+  const to = `${tierEmoji[newTier] || '⚫'} ${newTier}`;
   return {
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*Tier change* — <${companyUrl}|${companyName}>\n${oldTier ? `${tierEmoji[oldTier] || '⚫'} ${oldTier}` : '_(unranked)_'} → ${tierEmoji[newTier] || '⚫'} *${newTier}*`,
-        },
-      },
-      {
-        type: 'context',
-        elements: [{ type: 'mrkdwn', text: `Changed by ${changerEmail.split('@')[0]}` }],
-      },
-    ],
+    text: `📊 *Tier change* — ${companyName}\n${from} → ${to}\nChanged by ${changerEmail.split('@')[0]}\n${companyUrl}`,
   };
 }
 
@@ -54,18 +40,6 @@ export function candidateAddedMessage(params: {
 }) {
   const { candidateName, companyName, role, stage, addedBy, companyUrl } = params;
   return {
-    blocks: [
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: `*New candidate tracked* — <${companyUrl}|${companyName}>\n*${candidateName}*${role ? ` · ${role}` : ''} · Stage: ${stage}`,
-        },
-      },
-      {
-        type: 'context',
-        elements: [{ type: 'mrkdwn', text: `Added by ${addedBy.split('@')[0]}` }],
-      },
-    ],
+    text: `👤 *New candidate tracked* — ${companyName}\n${candidateName}${role ? ` · ${role}` : ''} · Stage: ${stage}\nAdded by ${addedBy.split('@')[0]}\n${companyUrl}`,
   };
 }
